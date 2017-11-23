@@ -33,7 +33,7 @@
 //
 static constexpr int Width = 160;
 static constexpr int Height = 120;
-static constexpr int PixelScale = 1;
+static constexpr int PixelScale = 5;
 
 
 

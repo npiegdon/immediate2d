@@ -16,6 +16,8 @@ Includes a nice set of examples with exercises taking a student from drawing a s
 
 Everything you need is documented in [drawing.h](/drawing.h) and a [Quick Reference](/QuickReference.pdf) is supplied that fits everything on one page.
 
+Visit the [Releases](https://github.com/npiegdon/immediate2d/releases/latest) page to download and play with pre-built versions of the examples. 
+
 ---
 
 ### Example 1 - Hellow World
