@@ -10,12 +10,12 @@
 
 //
 // This is free and unencumbered software released into the public domain.
-// 
+//
 // Anyone is free to copy, modify, publish, use, compile, sell, or
 // distribute this software, either in source code form or as a compiled
 // binary, for any purpose, commercial or non - commercial, and by any
 // means.
-// 
+//
 // In jurisdictions that recognize copyright laws, the author or authors
 // of this software dedicate any and all copyright interest in the
 // software to the public domain. We make this dedication for the benefit
@@ -23,7 +23,7 @@
 // successors. We intend this dedication to be an overt act of
 // relinquishment in perpetuity of all present and future rights to this
 // software under copyright law.
-// 
+//
 // THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
 // EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
 // MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
@@ -31,7 +31,7 @@
 // OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE,
 // ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
 // OTHER DEALINGS IN THE SOFTWARE.
-// 
+//
 // For more information, please refer to <http://unlicense.org/>
 //
 
@@ -544,7 +544,7 @@ void PlayMidiNote(int noteId, int ms)
         // We always use the "Lead 1 (Square)" instrument because it sounds like the PC speaker
         constexpr uint8_t Instrument = 80;
         midiOutShortMsg(synth, 0xC0 | (Instrument << 8));
-        
+
         while (musicRunning)
         {
             MusicNote n;
@@ -663,15 +663,15 @@ LRESULT CALLBACK WndProc(HWND wnd, UINT msg, WPARAM w, LPARAM l)
 
 int WINAPI WinMain(HINSTANCE instance, HINSTANCE, LPSTR, int cmdShow)
 {
-    WNDCLASS wc{ CS_OWNDC, WndProc, 0, 0, instance, LoadIcon(nullptr, IDI_APPLICATION), LoadCursor(nullptr, IDC_ARROW), (HBRUSH)(COLOR_WINDOW + 1), nullptr, L"Immediate2D" };
-    if (!RegisterClass(&wc)) return 1;
+    WNDCLASSW wc{ CS_OWNDC, WndProc, 0, 0, instance, LoadIcon(nullptr, IDI_APPLICATION), LoadCursor(nullptr, IDC_ARROW), (HBRUSH)(COLOR_WINDOW + 1), nullptr, L"Immediate2D" };
+    if (!RegisterClassW(&wc)) return 1;
 
     const DWORD style = WS_OVERLAPPED | WS_SYSMENU | WS_CAPTION;
 
     RECT r{ 0, 0, Width * PixelScale, Height * PixelScale };
     AdjustWindowRect(&r, style, FALSE);
 
-    HWND wnd = CreateWindow(L"Immediate2D", L"Immediate2D", style, CW_USEDEFAULT, CW_USEDEFAULT, r.right - r.left, r.bottom - r.top, nullptr, nullptr, instance, nullptr);
+    HWND wnd = CreateWindowW(L"Immediate2D", L"Immediate2D", style, CW_USEDEFAULT, CW_USEDEFAULT, r.right - r.left, r.bottom - r.top, nullptr, nullptr, instance, nullptr);
     if (wnd == nullptr) return 1;
 
     ULONG_PTR gdiPlusToken;

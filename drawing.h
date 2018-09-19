@@ -12,17 +12,34 @@
 
 //
 // Getting started:
-//   1. Create a new "Win32 Project" in a recent version of Visual Studio
-//      (that has the "Desktop development with C++" workload installed)
-//   2. Be sure to select "Empty Project" during project creation
-//   3. Add a new .cpp file named "main.cpp" to the project
-//   4. Copy drawing.cpp and drawing.h to the same folder as your main.cpp
-//   5. Drag drawing.cpp and drawing.h to your project in "Solution Explorer"
-//   6. Type the following at the top of your new main.cpp file:
-//         #include "drawing.h"
-//   7. Add a new "void main()" function just below your include statement
-//   8. Write some code in your main function using the instructions below!
-//      (Take a look at the examples to get some ideas)
+//
+//   You'll need a recent Visual Studio with the "Desktop development with C++"
+//   workload selected during the install process.
+//
+//   1. Launch Visual Studio and choose File --> New --> Project.
+//   2. Type in whatever project name and choose whichever location you like.
+//   3. From the "Visual C++" --> "Windows Desktop" category, choose "Windows
+//      Desktop Wizard", then click OK.
+//
+//   4. Choose "Windows Application (.exe)" from the "Application type" box.
+//   5. Add a check mark to the "Empty Project" box!
+//   6. Click OK.
+//
+//   7. Copy the following 3 files from Immediate2D into your project's folder:
+//      - drawing.cpp
+//      - drawing.h
+//      - example1_helloWorld.cpp
+//
+//   8. Rename your example1_helloWorld.cpp to something like MyProject.cpp
+//   9. Drag all three of your new files from the folder to the "Source Files"
+//      entry in Visual Studio's "Solution Explorer" panel.
+//
+//   You should be ready to go!  Click the green play arrow (labeled "Local
+//   Windows Debugger") in the tool bar and after a few seconds you should see
+//   a dot in the middle of a black window.  Congratulations!
+//
+//   Double-click your MyProject.cpp file (or whatever you named it) in the
+//   "Source Files" list in the Solution Explorer panel and start writing code!
 //
 
 
