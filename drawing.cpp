@@ -313,6 +313,9 @@ void ClearInputBuffer();
 // can use it without a lot of distracting copy-paste.
 void DrawString(int x, int y, const std::string &s, const Color c, bool centered = false);
 
+// This is very similar to the other drawing calls, but for portions of a circle
+void DrawArc(int x, int y, float radius, float thickness, Color c, float startRadians, float endRadians);
+
 // This is kind of out of the scope of a drawing framework, but it's too much fun not to include!
 //
 // Uses the built-in Microsoft MIDI synth to play music notes in the background.  Only one note
@@ -437,6 +440,9 @@ void DrawLine(int x1, int y1, int x2, int y2, int thickness, Color c)
 
     Gdiplus::Color color(c);
     Gdiplus::Pen p(c, (float)thickness);
+    p.SetStartCap(Gdiplus::LineCapRound);
+    p.SetEndCap(Gdiplus::LineCapRound);
+
     graphics->DrawLine(&p, x1, y1, x2, y2);
 
     SetDirty();
@@ -461,6 +467,22 @@ void DrawCircle(int x, int y, int radius, Color c, bool filled)
         graphics->DrawEllipse(&p, r);
     }
 
+    SetDirty();
+}
+
+void DrawArc(int x, int y, float radius, float thickness, Color c, float startRadians, float endRadians)
+{
+    lock_guard<mutex> lock(bitmapLock);
+    if (!bitmap) return;
+
+    Gdiplus::Color color(c);
+    Gdiplus::Pen p(c, thickness);
+    p.SetStartCap(Gdiplus::LineCapRound);
+    p.SetEndCap(Gdiplus::LineCapRound);
+
+    const auto s = static_cast<Gdiplus::REAL>(startRadians * 360.0 / Tau);
+    const auto e = static_cast<Gdiplus::REAL>(endRadians * 360.0 / Tau);
+    graphics->DrawArc(&p, x - radius, y - radius, radius * 2, radius * 2, s, e - s);
     SetDirty();
 }
 
