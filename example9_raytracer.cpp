@@ -130,7 +130,7 @@ Vec radiance(const Ray &r, int depth)
     // Ideal DIFFUSE reflection
     if (obj.refl == DIFF)
     {
-        double r1 = 2 * 3.1415926*RandomDouble();
+        double r1 = Tau * RandomDouble();
         double r2 = RandomDouble();
         double r2s = sqrt(r2);
 

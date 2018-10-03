@@ -14,7 +14,7 @@ void main()
 {
     int x = 80;
     int y = 60;
-    int radius = 10;
+    int radius = 20;
     int delay = 1000;
 
     // Draw shapes with smooth edges

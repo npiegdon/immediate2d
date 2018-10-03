@@ -54,6 +54,10 @@ static constexpr int PixelScale = 5;
 
 
 
+// A useful constant (equal to two pi) to help with trigonometry or circles
+static constexpr double Tau = 6.283185307179586476925286766559;
+
+
 
 ///////////////////////////////////////////////////////////////////////////////
 // Color
