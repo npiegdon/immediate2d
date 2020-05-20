@@ -43,6 +43,7 @@
 
 #include "drawing.h"
 
+#include <map>
 #include <mutex>
 #include <deque>
 #include <chrono>
@@ -53,6 +54,7 @@
 #include <thread>
 #include <numeric>
 #include <algorithm>
+#include <functional>
 
 
 
@@ -117,17 +119,19 @@ static_assert(Width > 0, "Width must be greater than 0.");
 static_assert(Height > 0, "Height must be greater than 0.");
 static_assert(PixelScale > 0, "PixelScale must be greater than 0.");
 
+static bool dirty{ true };
+static bool doubleBuffered{ false };
+
 static atomic<char> key{ 0 };
-static atomic<bool> dirty{ true };
 static atomic<bool> quitting{ false };
 static atomic<bool> musicRunning{ true };
-static atomic<bool> doubleBuffered{ false };
 static atomic<bool> mouseDown[3]{ false, false, false };
 static atomic<int> mouseX{ -1 }, mouseY{ -1 };
 
 static mutex bitmapLock;
-static unique_ptr<Gdiplus::Bitmap> bitmap;
-static unique_ptr<Gdiplus::Graphics> graphics;
+static unique_ptr<Gdiplus::Bitmap> bitmap, bitmapOther;
+static unique_ptr<Gdiplus::Graphics> graphics, graphicsOther;
+static map<pair<string, int>, unique_ptr<Gdiplus::Font>> fonts;
 
 static mutex musicLock;
 static unique_ptr<thread> musicThread;
@@ -140,11 +144,34 @@ static deque<char> inputBuffer;
 
 void main();
 
-void Present() { dirty = true; }
+void Present()
+{
+    lock_guard<mutex> lock(bitmapLock);
+
+    if (doubleBuffered)
+    {
+        // This is more "offscreen composition" than double-buffering.  We could probably add a
+        // an option to avoid this copy if the user really knew that they were going to redraw the
+        // entire screen each frame.  But for now we assume immediate-mode drawing and make sure
+        // things are consistent instead of flickering each frame if you've got different sets of
+        // things drawn on each buffer
+        graphicsOther->DrawImage(bitmap.get(), 0, 0);
+    }
+
+    std::swap(graphics, graphicsOther);
+    std::swap(bitmap, bitmapOther);
+    dirty = true;
+}
+
 void CloseWindow() { quitting = true; }
 char LastKey() { return key.exchange(0); }
-void UseDoubleBuffering(bool enabled) { doubleBuffered = enabled; Present(); }
 void Wait(int milliseconds) { this_thread::sleep_for(std::chrono::milliseconds(milliseconds)); }
+void UseDoubleBuffering(bool enabled)
+{
+    lock_guard<mutex> lock(bitmapLock);
+    doubleBuffered = enabled;
+    dirty = true;
+}
 
 int MouseX() { return mouseX; }
 int MouseY() { return mouseY; }
@@ -152,7 +179,20 @@ bool LeftMousePressed() { return mouseDown[0]; }
 bool RightMousePressed() { return mouseDown[1]; }
 bool MiddleMousePressed() { return mouseDown[2]; }
 
-static void SetDirty() { if (!doubleBuffered) dirty = true; }
+static void SetDirty()
+{
+    if (bitmapLock.try_lock()) throw std::runtime_error("SetDirty must be called while bitmapLock is held.");
+    if (!doubleBuffered) dirty = true;
+}
+
+static const wstring ToWide(const std::string &utf8)
+{
+    const int wlen = ::MultiByteToWideChar(CP_UTF8, 0, utf8.c_str(), -1, nullptr, 0);
+    auto buffer = make_unique<wchar_t[]>(wlen);
+
+    const int success = ::MultiByteToWideChar(CP_UTF8, 0, utf8.c_str(), -1, buffer.get(), wlen);
+    return success ? wstring(buffer.get()) : wstring();
+}
 
 char LastBufferedKey()
 {
@@ -199,7 +239,7 @@ uint64_t xoroshiro128plus(void) {
 
 int RandomInt(int low, int high)
 {
-    return (xoroshiro128plus() % (high - low)) + low;
+    return (xoroshiro128plus() % (int64_t(high) - int64_t(low))) + low;
 }
 
 double RandomDouble()
@@ -232,10 +272,10 @@ static CLSID GetEncoderClsid(const wstring &format)
     return CLSID{};
 }
 
-void SaveImage(int suffix)
+void SaveImage(unsigned int suffix)
 {
     lock_guard<mutex> lock(bitmapLock);
-    if (!bitmap) return;
+    if (!graphics) return;
 
     static wstring desktop;
     if (desktop.empty())
@@ -296,7 +336,7 @@ void Present(const std::vector<Color> &screen);
 
 // Sometimes immediate input (where the most-recent keypress overwrites all others) isn't the
 // best fit.  If you don't want to miss any input, use this instead of LastKey.  Up to one
-// hundred or so of the most recent keypresses are stored in a queued and can be retrieved
+// hundred or so of the most recent keypresses are stored in a queue and can be retrieved
 // one-by-one by calling this until it returns 0 (which indicates the input queue is empty).
 //
 // NOTE: This operates completely independently from LastKey.  The same input will be reported
@@ -313,8 +353,15 @@ void ClearInputBuffer();
 // can use it without a lot of distracting copy-paste.
 void DrawString(int x, int y, const std::string &s, const Color c, bool centered = false);
 
+// This DrawString uses the system's built-in font rendering and can handle UTF-8 strings to
+// print Unicode characters in any size using any font installed on the system.
+void DrawString(int x, int y, const std::string &s, const std::string &fontName, int fontPtSize, const Color c, bool centered = false);
+
 // This is very similar to the other drawing calls, but for portions of a circle
 void DrawArc(int x, int y, float radius, float thickness, Color c, float startRadians, float endRadians);
+
+// Lets you draw using the raw GDI+ Graphics object if that's something you're interested in
+void Draw(std::function<void(Gdiplus::Graphics &g)> f);
 
 // This is kind of out of the scope of a drawing framework, but it's too much fun not to include!
 //
@@ -328,10 +375,14 @@ void PlayMidiNote(int noteId, int milliseconds);
 
 // Because MIDI notes are queued and played sequentially in the background, you may need to
 // interrupt whatever is currently playing in order to play something more important.
-void ClearMidiQueue();
+void ResetMusic();
 
 
 
+Color MakeColor(int r, int g, int b, int a)
+{
+    return ((a & 0xFF) << 24) | ((r & 0xFF) << 16) | ((g & 0xFF) << 8) | ((b & 0xFF) << 0);
+}
 
 Color MakeColor(int r, int g, int b)
 {
@@ -376,9 +427,10 @@ Color MakeColorHSV(int hue, int sat, int val)
 void UseAntiAliasing(bool enabled)
 {
     lock_guard<mutex> lock(bitmapLock);
-    if (!bitmap) return;
+    if (!graphics) return;
 
     graphics->SetSmoothingMode(enabled ? Gdiplus::SmoothingModeAntiAlias : Gdiplus::SmoothingModeNone);
+    graphicsOther->SetSmoothingMode(enabled ? Gdiplus::SmoothingModeAntiAlias : Gdiplus::SmoothingModeNone);
 }
 
 void SetPixel(int x, int y, Color c)
@@ -386,7 +438,7 @@ void SetPixel(int x, int y, Color c)
     if (x < 0 || x >= Width || y < 0 || y >= Height) return;
 
     lock_guard<mutex> lock(bitmapLock);
-    if (!bitmap) return;
+    if (!graphics) return;
 
     Gdiplus::BitmapData d;
 
@@ -403,11 +455,13 @@ void Present(const std::vector<Color> &screen)
     if (screen.size() != Width * Height) return;
 
     lock_guard<mutex> lock(bitmapLock);
-    if (!bitmap) return;
+    if (!graphics) return;
 
     Gdiplus::BitmapData d;
     Gdiplus::Rect r(0, 0, Width, Height);
-    bitmap->LockBits(&r, Gdiplus::ImageLockModeWrite, bitmap->GetPixelFormat(), &d);
+
+    auto &b = doubleBuffered ? bitmapOther : bitmap;
+    b->LockBits(&r, Gdiplus::ImageLockModeWrite, b->GetPixelFormat(), &d);
 
     auto dstLine = reinterpret_cast<uint32_t*>(d.Scan0);
     for (int y = 0; y < Height; ++y)
@@ -417,7 +471,7 @@ void Present(const std::vector<Color> &screen)
         dstLine += d.Stride / 4;
     }
 
-    bitmap->UnlockBits(&d);
+    b->UnlockBits(&d);
     dirty = true;
 }
 
@@ -426,7 +480,7 @@ Color GetPixel(int x, int y)
     if (x < 0 || x >= Width || y < 0 || y >= Height) return Black;
 
     lock_guard<mutex> lock(bitmapLock);
-    if (!bitmap) return Black;
+    if (!graphics) return Black;
 
     Gdiplus::Color c;
     bitmap->GetPixel(x, y, &c);
@@ -436,7 +490,22 @@ Color GetPixel(int x, int y)
 void DrawLine(int x1, int y1, int x2, int y2, int thickness, Color c)
 {
     lock_guard<mutex> lock(bitmapLock);
-    if (!bitmap) return;
+    if (!graphics) return;
+
+    Gdiplus::Color color(c);
+    Gdiplus::Pen p(c, (float)thickness);
+    p.SetStartCap(Gdiplus::LineCapRound);
+    p.SetEndCap(Gdiplus::LineCapRound);
+
+    graphics->DrawLine(&p, x1, y1, x2, y2);
+
+    SetDirty();
+}
+
+void DrawLine(float x1, float y1, float x2, float y2, int thickness, Color c)
+{
+    lock_guard<mutex> lock(bitmapLock);
+    if (!graphics) return;
 
     Gdiplus::Color color(c);
     Gdiplus::Pen p(c, (float)thickness);
@@ -451,9 +520,31 @@ void DrawLine(int x1, int y1, int x2, int y2, int thickness, Color c)
 void DrawCircle(int x, int y, int radius, Color c, bool filled)
 {
     lock_guard<mutex> lock(bitmapLock);
-    if (!bitmap) return;
+    if (!graphics) return;
 
     Gdiplus::Rect r(x - radius, y - radius, radius * 2, radius * 2);
+    Gdiplus::Color color(c);
+
+    if (filled)
+    {
+        Gdiplus::SolidBrush brush(c);
+        graphics->FillEllipse(&brush, r);
+    }
+    else
+    {
+        Gdiplus::Pen p(c);
+        graphics->DrawEllipse(&p, r);
+    }
+
+    SetDirty();
+}
+
+void DrawCircle(float x, float y, float radius, Color c, bool filled)
+{
+    lock_guard<mutex> lock(bitmapLock);
+    if (!graphics) return;
+
+    Gdiplus::RectF r(x - radius, y - radius, radius * 2, radius * 2);
     Gdiplus::Color color(c);
 
     if (filled)
@@ -473,7 +564,7 @@ void DrawCircle(int x, int y, int radius, Color c, bool filled)
 void DrawArc(int x, int y, float radius, float thickness, Color c, float startRadians, float endRadians)
 {
     lock_guard<mutex> lock(bitmapLock);
-    if (!bitmap) return;
+    if (!graphics) return;
 
     Gdiplus::Color color(c);
     Gdiplus::Pen p(c, thickness);
@@ -486,10 +577,22 @@ void DrawArc(int x, int y, float radius, float thickness, Color c, float startRa
     SetDirty();
 }
 
+void Draw(std::function<void(Gdiplus::Graphics &g)> f)
+{
+    if (!f) return;
+
+    lock_guard<mutex> lock(bitmapLock);
+    if (!graphics) return;
+
+    f(*graphics.get());
+
+    SetDirty();
+}
+
 void DrawRectangle(int x, int y, int width, int height, Color c, bool filled)
 {
     lock_guard<mutex> lock(bitmapLock);
-    if (!bitmap) return;
+    if (!graphics) return;
 
     // GDI+'s DrawRectangle and FillRectangle behave a little differently: One
     // of them treats the end coordinates as inclusive and the other exclusive
@@ -538,12 +641,45 @@ void DrawString(int x, int y, const string &s, const Color c, bool centered, fun
 }
 
 // Windows has their own SetPixel in global scope, so we need the static_cast to disambiguate from ours
-void DrawString(int x, int y, const string &s, const Color c, bool centered) { DrawString(x, y, s, c, centered, static_cast<void(*)(int, int, Color)>(SetPixel)); }
+void DrawString(int x, int y, const string &s, const Color c, bool centered)
+{
+    DrawString(x, y, s, c, centered, static_cast<void(*)(int, int, Color)>(SetPixel));
+}
+
+void DrawString(int x, int y, const string &s, const string &fontName, int fontPtSize, const Color c, bool centered)
+{
+    if (fontPtSize < 1 || s.empty()) return;
+
+    lock_guard<mutex> lock(bitmapLock);
+    if (!graphics) return;
+
+    static auto getFont = [] (string name, int size) {
+        const pair<string, int> key{ name, size };
+
+        const auto found = fonts.find(key);
+        if (found != fonts.end()) return &found->second;
+
+        fonts[key] = make_unique<Gdiplus::Font>(ToWide(name).c_str(), static_cast<Gdiplus::REAL>(size));
+        return &fonts[key];
+    };
+
+    const auto wide = ToWide(s);
+    const auto font = getFont(fontName, fontPtSize);
+    const Gdiplus::SolidBrush brush(c);
+    const Gdiplus::PointF origin{ static_cast<Gdiplus::REAL>(x), static_cast<Gdiplus::REAL>(y) };
+    Gdiplus::StringFormat format;
+    format.SetAlignment(centered ? Gdiplus::StringAlignmentCenter : Gdiplus::StringAlignmentNear);
+
+    bool aa = graphics->GetSmoothingMode() == Gdiplus::SmoothingModeAntiAlias;
+    graphics->SetTextRenderingHint(aa ? Gdiplus::TextRenderingHintAntiAlias : Gdiplus::TextRenderingHintSingleBitPerPixelGridFit);
+    graphics->DrawString(wide.c_str(), static_cast<INT>(wide.length()), font->get(), origin, &format, &brush);
+    SetDirty();
+}
 
 void Clear(Color c)
 {
     lock_guard<mutex> lock(bitmapLock);
-    if (!bitmap) return;
+    if (!graphics) return;
 
     graphics->Clear(Gdiplus::Color(c));
     SetDirty();
@@ -593,7 +729,7 @@ void PlayMidiNote(int noteId, int ms)
     });
 }
 
-void ClearMidiQueue()
+void ResetMusic()
 {
     lock_guard<mutex> lock(musicLock);
     musicQueue.clear();
@@ -602,8 +738,8 @@ void ClearMidiQueue()
 
 LRESULT CALLBACK WndProc(HWND wnd, UINT msg, WPARAM w, LPARAM l)
 {
-    static HDC backbufferDC = nullptr;
-    static HBITMAP backbuffer = nullptr;
+    static HDC bitmapDC{};
+    static HBITMAP hbitmap{};
 
     switch (msg)
     {
@@ -617,31 +753,26 @@ LRESULT CALLBACK WndProc(HWND wnd, UINT msg, WPARAM w, LPARAM l)
         PAINTSTRUCT ps;
         HDC hdc = BeginPaint(wnd, &ps);
 
-        // Gdiplus::Graphics::DrawImage isn't fast enough to avoid lots of flicker, so we
-        // draw it to a background surface and then do a quick BitBlt to the front buffer
-        if (!backbuffer)
+        // A scaled GDI+ blit (even with nearest neighbor interpolation) is much slower than a plain
+        // Win32 StretchBlt.  Even with the extra 1:1 copy to a GDI surface first, it's still faster.
+        if (!hbitmap)
         {
-            backbufferDC = CreateCompatibleDC(hdc);
-            backbuffer = CreateCompatibleBitmap(hdc, Width, Height);
+            bitmapDC = CreateCompatibleDC(hdc);
+            hbitmap = CreateCompatibleBitmap(hdc, Width, Height);
         }
 
-        HANDLE old = SelectObject(backbufferDC, backbuffer);
-
-        // GDI+ normally starts from the center of a pixel, which doesn't work correctly if you're scaling up
-        // See: https://www.codeproject.com/Articles/14884/BorderBug
-        //
-        const Gdiplus::RectF dest(0, 0, (float)Width, (float)Height);
+        HANDLE old = SelectObject(bitmapDC, hbitmap);
 
         {
             lock_guard<mutex> lock(bitmapLock);
-            Gdiplus::Graphics hdcG(backbufferDC);
+            Gdiplus::Graphics hdcG(bitmapDC);
 
             hdcG.SetInterpolationMode(Gdiplus::InterpolationModeNearestNeighbor);
-            hdcG.DrawImage(bitmap.get(), dest, -0.5f, -0.5f, (float)Width, (float)Height, Gdiplus::UnitPixel);
+            hdcG.DrawImage(doubleBuffered ? bitmapOther.get() : bitmap.get(), 0, 0, 0, 0, Width, Height, Gdiplus::UnitPixel);
         }
 
-        StretchBlt(hdc, 0, 0, Width * PixelScale, Height * PixelScale, backbufferDC, 0, 0, Width, Height, SRCCOPY);
-        SelectObject(backbufferDC, old);
+        StretchBlt(hdc, 0, 0, Width * PixelScale, Height * PixelScale, bitmapDC, 0, 0, Width, Height, SRCCOPY);
+        SelectObject(bitmapDC, old);
 
         EndPaint(wnd, &ps);
         return 0;
@@ -701,7 +832,9 @@ int WINAPI WinMain(HINSTANCE instance, HINSTANCE, LPSTR, int cmdShow)
     Gdiplus::Status startupResult = GdiplusStartup(&gdiPlusToken, &gdiplusStartupInput, NULL);
 
     bitmap = make_unique<Gdiplus::Bitmap>(Width, Height);
+    bitmapOther = make_unique<Gdiplus::Bitmap>(Width, Height);
     graphics = make_unique<Gdiplus::Graphics>(bitmap.get());
+    graphicsOther = make_unique<Gdiplus::Graphics>(bitmapOther.get());
     UseAntiAliasing(false);
     Clear();
 
@@ -727,7 +860,10 @@ int WINAPI WinMain(HINSTANCE instance, HINSTANCE, LPSTR, int cmdShow)
         const auto now = high_resolution_clock::now();
         if (now - lastDraw > 5ms)
         {
-            if (dirty.exchange(false)) InvalidateRect(wnd, nullptr, FALSE);
+            lock_guard<mutex> lock(bitmapLock);
+            if (dirty) InvalidateRect(wnd, nullptr, FALSE);
+            dirty = false;
+
             lastDraw = now;
         }
         else this_thread::sleep_for(1ms);
@@ -735,7 +871,10 @@ int WINAPI WinMain(HINSTANCE instance, HINSTANCE, LPSTR, int cmdShow)
 
     {
         lock_guard<mutex> lock(bitmapLock);
+        fonts.clear();
+        graphicsOther.reset();
         graphics.reset();
+        bitmapOther.reset();
         bitmap.reset();
         Gdiplus::GdiplusShutdown(gdiPlusToken);
 

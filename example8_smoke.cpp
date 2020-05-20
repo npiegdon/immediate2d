@@ -229,7 +229,6 @@ void main()
     DrawString(Width / 2, 5 * Height / 7, "Use spacebar to toggle velocity view", 0, true, drawToSmoke);
     DrawString(Width / 2, 6 * Height / 7, "(Press 'C' to clear the screen)",      0, true, drawToSmoke);
 
-    UseDoubleBuffering(true);
     bool showVelocity = false;
     bool mouseWasDown = false;
     int downX = -1, downY = -1;

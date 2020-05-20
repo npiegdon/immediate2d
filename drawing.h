@@ -3,6 +3,7 @@
 ///////////////////////////////////////////////////////////////////////////////
 //
 // Immediate2D - Created by Nicholas Piegdon, released in the public domain
+// https://github.com/npiegdon/immediate2d
 //
 // A drawing framework for Windows that makes simple graphics programming as
 // fun and easy as the days when computers booted directly to a BASIC prompt
@@ -179,27 +180,27 @@ void CloseWindow();
 
 // Saves your current drawing to a PNG image file on your desktop
 //
-// It's usually called "image.png" unless you provide a positive integer
-// suffix.  Then you'll get names like "image_4.png" or "image_26.png"
+// Calling SaveImage() will give you a file called "image.png".  If you provide
+// a number, say, SaveImage(26), you'll get a file called "image_26.png".
 //
-void SaveImage(int suffix = 0);
+void SaveImage(unsigned int suffix = 0);
 
 
 // Generates a random integer in the interval [low, high)
 //
 // This is useful for placing things on the screen:
-//     x = RandomInt(0, Width);
-//     y = RandomInt(0, Height);
+//     int x = RandomInt(0, Width);
+//     int y = RandomInt(0, Height);
 //
 // Or for generating random colors:
-//     c = MakeColor(RandomInt(0, 256), RandomInt(0, 256), RandomInt(0, 256));
+//     Color c = MakeColor(RandomInt(0, 256), RandomInt(0, 256), RandomInt(0, 256));
 //
 int RandomInt(int low, int high);
 
 // Generates a random double in the unit interval [0, 1]
 //
-// This is useful for trajectories (and lots of other things):
-//     theta = RandomDouble() * 2.0 * 3.141592653589;
+// This is useful for lots of things like picking a random angle:
+//     double theta = RandomDouble() * Tau;
 //
 double RandomDouble();
 
@@ -221,7 +222,7 @@ void Wait(int milliseconds);
 
 
 // Returns the most recently pressed keyboard character.  For special, non-
-// printable characters, test against the values in Keys, below.
+// printable characters, test against the values in "Keys", below.
 //
 // NOTE: To avoid reporting the same key press forever, this function only
 //       returns the value ONCE and will subsequently report a value of zero
@@ -231,6 +232,8 @@ void Wait(int milliseconds);
 char LastKey();
 
 // Used to check the results of LastKey() against non-printable keys:
+//
+//     // Save the value in a variable before checking it
 //     const char key = LastKey();
 //     if (key == Enter) ...
 //     if (key == Left) ...
