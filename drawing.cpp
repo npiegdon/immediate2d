@@ -109,8 +109,12 @@ namespace Gdiplus { using std::min; using std::max; }
 #include <GdiPlus.h>
 
 // This instructs Visual Studio to add these to the list of libraries we link against
+#pragma comment(lib, "gdi32.lib")
+#pragma comment(lib, "user32.lib")
 #pragma comment(lib, "gdiplus.lib")
 #pragma comment(lib, "winmm.lib")
+#pragma comment(lib, "Ole32.lib")
+#pragma comment(lib, "Shell32.lib")
 
 using namespace std;
 using namespace std::chrono;
@@ -142,7 +146,7 @@ static deque<MusicNote> musicQueue;
 static mutex inputLock;
 static deque<char> inputBuffer;
 
-void main();
+extern void main();
 
 void Present()
 {
@@ -214,6 +218,7 @@ static void AddBufferedKey(char c)
 {
     lock_guard<mutex> lock(inputLock);
 
+    // If we're not using this feature, keep list a reasonable size
     inputBuffer.push_back(c);
     while (inputBuffer.size() > 100) inputBuffer.pop_front();
 }
@@ -384,7 +389,7 @@ Color MakeColor(int r, int g, int b, int a)
     return ((a & 0xFF) << 24) | ((r & 0xFF) << 16) | ((g & 0xFF) << 8) | ((b & 0xFF) << 0);
 }
 
-Color MakeColor(int r, int g, int b)
+constexpr Color MakeColor(int r, int g, int b)
 {
     return (0xFF << 24) | ((r & 0xFF) << 16) | ((g & 0xFF) << 8) | ((b & 0xFF) << 0);
 }
@@ -814,7 +819,7 @@ LRESULT CALLBACK WndProc(HWND wnd, UINT msg, WPARAM w, LPARAM l)
     return DefWindowProc(wnd, msg, w, l);
 }
 
-int WINAPI WinMain(HINSTANCE instance, HINSTANCE, LPSTR, int cmdShow)
+int WINAPI WinMain(_In_ HINSTANCE instance, _In_opt_ HINSTANCE, _In_ LPSTR, _In_ int cmdShow)
 {
     WNDCLASSW wc{ CS_OWNDC, WndProc, 0, 0, instance, LoadIcon(nullptr, IDI_APPLICATION), LoadCursor(nullptr, IDC_ARROW), (HBRUSH)(COLOR_WINDOW + 1), nullptr, L"Immediate2D" };
     if (!RegisterClassW(&wc)) return 1;

@@ -6,7 +6,7 @@
 // https://github.com/npiegdon/immediate2d
 //
 // A drawing framework for Windows that makes simple graphics programming as
-// fun and easy as the days when computers booted directly to a BASIC prompt
+// much fun as the days when computers booted directly to a BASIC prompt.
 //
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -17,12 +17,11 @@
 //   You'll need a recent Visual Studio with the "Desktop development with C++"
 //   workload selected during the install process.
 //
-//   1. Launch Visual Studio and choose File --> New --> Project.
-//   2. Type in whatever project name and choose whichever location you like.
-//   3. From the "Visual C++" --> "Windows Desktop" category, choose "Windows
-//      Desktop Wizard", then click OK.
+//   1. Launch Visual Studio and choose "Create a new project".
+//   2. For the project template, choose "Windows Desktop Wizard" from the list.
+//   3. Name the project whatever you like and save it wherever you like.
 //
-//   4. Choose "Windows Application (.exe)" from the "Application type" box.
+//   4. Choose "Desktop Application (.exe)" from the "Application type" box.
 //   5. Add a check mark to the "Empty Project" box!
 //   6. Click OK.
 //
@@ -45,9 +44,9 @@
 
 
 
-// Tinker with these to change the size of the window
+// Tinker with these to change the size of the window.
 //
-// (All of the examples assume a Width of 160 and Height of 120)
+// (All of the examples assume a Width of 160 and Height of 120.)
 //
 static constexpr int Width = 160;
 static constexpr int Height = 120;
@@ -55,7 +54,7 @@ static constexpr int PixelScale = 5;
 
 
 
-// A useful constant (equal to two pi) to help with trigonometry or circles
+// A useful constant (2*pi) to help with trigonometry or circles.
 static constexpr double Tau = 6.283185307179586476925286766559;
 
 
@@ -65,15 +64,15 @@ static constexpr double Tau = 6.283185307179586476925286766559;
 ///////////////////////////////////////////////////////////////////////////////
 
 
-// This declares a synonym: whenever you see "Color", it means "unsigned int"
+// This makes "Color" a synonym for "unsigned int" (a positive number).
 using Color = unsigned int;
 
-// Creates a color that can be used with the other drawing functions.
-// The r, g, and b parameters are color intensities between 0 and 255.
-Color MakeColor(int r, int g, int b);
+// MakeColor returns a Color that can be used with the other drawing functions.
+// The red, green, and blue parameters are color intensities between 0 and 255.
+constexpr Color MakeColor(int red, int green, int blue);
 
-// Here are some colors (from the old, 16-color EGA palette) to get you
-// started.  You can make your own using the same MakeColor function.
+// Here are some colors to get you started.
+static const Color Transparent =  0U;
 static const Color Black =        MakeColor(  0,   0,   0);
 static const Color Blue =         MakeColor(  0,   0, 170);
 static const Color Green =        MakeColor(  0, 170,   0);
@@ -102,15 +101,16 @@ static const Color White =        MakeColor(255, 255, 255);
 // For all of the following drawing functions, x is between 0 and Width;
 // y is between 0 and Height.
 //
-// In computer graphics, y=0 is the top of the screen and it increases
-// downward (contrary to the typical mathematics convention).
+// In computer graphics, y starts at the top of the screen and goes downward
+// as it increases. (This is upside-down from the way it's usually done in math
+// classes and can be a little tricky to get used to!)
 
 
-// Draws a single dot at (x, y) in the given color
+// Draws a single dot at (x, y) in the given color.
 void SetPixel(int x, int y, Color c);
 
 // Draws a line from (x1, y1) to (x2, y2) with a given stroke thickness
-// (in units of pixels) in the given color
+// (in pixels) in the given color.
 void DrawLine(int x1, int y1, int x2, int y2, int thickness, Color c);
 
 // Draws a circle centered at (x, y) with a given radius (in pixels).  The
@@ -124,7 +124,7 @@ void DrawCircle(int x, int y, int radius, Color c, bool filled);
 void DrawRectangle(int x, int y, int width, int height, Color c, bool filled);
 
 
-// Clears the screen to the given color (or Black if no color passed in)
+// Clears the screen to the given color (or Black if no color passed in).
 void Clear(Color c = Black);
 
 // Retrieves the color at the given location.  Test against specific colors:
@@ -135,29 +135,28 @@ Color GetPixel(int x, int y);
 
 
 
-// OPTIONAL!  When anti-aliasing is enabled, all drawing (except single pixels)
-// is done with soft edges.  Can be toggled at any time.  Disabled by default.
+// OPTIONAL!  Anti-aliasing is a graphics technique to make your lines and
+// circles appear with smooth/soft edges.
 void UseAntiAliasing(bool enabled);
 
-// OPTIONAL!  When double buffering is enabled, instead of drawing directly to
-// the screen, you'll be drawing to a "back buffer".  This lets you compose
-// entire scenes or erase and redraw objects without any visible flicker.
+// OPTIONAL!  Things are normally drawn to the screen just as your drawing
+// code is run.  This works fine until you have very intricate scenes that
+// require many drawing commands or when you want to animate something.  At
+// that point you may not want to see the intermediate drawing steps anymore.
 //
-// Once enabled, you must call the Present function (see below) in order to
-// see anything!
-//
-// Disabled by default
+// When you enable "double buffering", your drawing will take place on a
+// different, hidden surface called the "back-buffer".  You can draw as much
+// as you like to the hidden back-buffer without any visible changes to the
+// screen.  Then, after you've composed your entire scene or updated your
+// animation, you can "present" the scene all at once.
 //
 void UseDoubleBuffering(bool enabled);
 
-// OPTIONAL!  Only necessary when you've enabled double buffering.  Call when
-// you would like to simultaneously show all new drawing performed since your
-// previous Present().
+// OPTIONAL!  This isn't normally needed.  But, if you've enabled double
+// buffering, you MUST Present() whenever you would like to show the results
+// of all your drawing code since the last time you called Present().
 //
 // Tip: If called at regular intervals, you can achieve an animation effect.
-//
-// If double buffering is enabled, this MUST be called after you're finished
-// drawing in order to see anything!
 //
 void Present();
 
@@ -178,10 +177,10 @@ void Present();
 //
 void CloseWindow();
 
-// Saves your current drawing to a PNG image file on your desktop
+// Saves your current drawing to a PNG image file on your desktop.
 //
-// Calling SaveImage() will give you a file called "image.png".  If you provide
-// a number, say, SaveImage(26), you'll get a file called "image_26.png".
+// Calling SaveImage() will give you a file called "image.png".  If you include
+// a number like SaveImage(26) then you'll get a file called "image_26.png".
 //
 void SaveImage(unsigned int suffix = 0);
 
@@ -197,15 +196,23 @@ void SaveImage(unsigned int suffix = 0);
 //
 int RandomInt(int low, int high);
 
-// Generates a random double in the unit interval [0, 1]
+// Generates a random "real" number between zero and one.
 //
-// This is useful for lots of things like picking a random angle:
+// This is useful whenever you need something that isn't a whole number.  You
+// could pick a random angle (in radians) around a circle like this:
 //     double theta = RandomDouble() * Tau;
+//
+// Or a random angle (in degrees):
+//     double theta = RandomDouble() * 360.0;
 //
 double RandomDouble();
 
 
-// Delays for the given number of milliseconds.  Useful for animation.
+// Delays your code for the given number of milliseconds.  By drawing, then
+// waiting, then drawing something else, you can make things animate.
+//
+// There are 1000 milliseconds in one second.
+//
 void Wait(int milliseconds);
 
 
@@ -244,7 +251,7 @@ char LastKey();
 //
 enum Keys
 {
-    Left = 0x11,
+    Left = 17,
     Up,
     Right,
     Down,
@@ -261,7 +268,7 @@ bool LeftMousePressed();
 bool RightMousePressed();
 bool MiddleMousePressed();
 
-// Retrieves the current mouse coordinates, or (-1, -1) if the mouse isn't
-// currently hovering over our window
+// Retrieves the current mouse position (relative to the top-left corner of
+// the drawing surface), or -1 if the mouse cursor isn't inside our window.
 int MouseX();
 int MouseY();
