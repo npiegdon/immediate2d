@@ -40,17 +40,17 @@ void PlayMidiNote(int noteId, int milliseconds);
 void SetBigPixel(int x, int y, Color c)
 {
     // We have a little extra vertical space left over, so leave some room for a header
-    SetPixel(x * 2,     y * 2 + 10, c);
-    SetPixel(x * 2 + 1, y * 2 + 10, c);
-    SetPixel(x * 2,     y * 2 + 11, c);
-    SetPixel(x * 2 + 1, y * 2 + 11, c);
+    DrawPixel(x * 2,     y * 2 + 10, c);
+    DrawPixel(x * 2 + 1, y * 2 + 10, c);
+    DrawPixel(x * 2,     y * 2 + 11, c);
+    DrawPixel(x * 2 + 1, y * 2 + 11, c);
 }
 
 Color GetBigPixel(int x, int y)
 {
     // We assume all four pixels are the same color.  This routine just exists
     // to do the x2 and header padding calculation for us.
-    return GetPixel(x * 2, y * 2 + 10);
+    return ReadPixel(x * 2, y * 2 + 10);
 }
 
 const Color Walls = LightRed;

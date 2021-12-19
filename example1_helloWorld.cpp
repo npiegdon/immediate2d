@@ -13,5 +13,5 @@
 
 void run()
 {
-    SetPixel(80, 60, Yellow);
+    DrawPixel(80, 60, Yellow);
 }

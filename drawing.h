@@ -107,7 +107,7 @@ static const Color White =        MakeColor(255, 255, 255);
 
 
 // Draws a single dot at (x, y) in the given color.
-void SetPixel(int x, int y, Color c);
+void DrawPixel(int x, int y, Color c);
 
 // Draws a line from (x1, y1) to (x2, y2) with a given stroke thickness
 // (in pixels) in the given color.
@@ -128,9 +128,9 @@ void DrawRectangle(int x, int y, int width, int height, Color c, bool filled);
 void Clear(Color c = Black);
 
 // Retrieves the color at the given location.  Test against specific colors:
-//     if (GetPixel(playerX, playerY) == Black) ...
+//     if (ReadPixel(playerX, playerY) == Black) ...
 //
-Color GetPixel(int x, int y);
+Color ReadPixel(int x, int y);
 
 
 

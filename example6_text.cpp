@@ -78,7 +78,7 @@ int DrawCharacter(int left, int top, char c, Color color)
         for (int y = top; y < top + 5; y++)
         {
             // If the current (LSB) bit is 1, we draw this pixel
-            if ((glyph & 1) == 1) SetPixel(x, y, color);
+            if ((glyph & 1) == 1) DrawPixel(x, y, color);
 
             // Shift out the next pixel from our packed glyph
             glyph = glyph >> 1;

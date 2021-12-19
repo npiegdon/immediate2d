@@ -99,7 +99,7 @@ void run()
         // for later and just draw a single pixel for now
         if (previousX == -1 && previousY == -1)
         {
-            SetPixel(x, y, colors[currentColor]);
+            DrawPixel(x, y, colors[currentColor]);
             previousX = x;
             previousY = y;
             continue;

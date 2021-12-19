@@ -50,6 +50,6 @@ void run()
         // Finally, shift it to the center of the screen (instead of the top edge)
         y += Height / 2;
 
-        SetPixel(p, (int)y, LightRed);
+        DrawPixel(p, (int)y, LightRed);
     }
 }

@@ -318,7 +318,7 @@ void SaveImage(unsigned int suffix)
 Color MakeColorHSV(int h, int s, int v);
 
 // If your program is going to be writing every pixel every frame, this is a simple optimization
-// over issuing Width*Height calls to SetPixel.  Instead of spending time on the thread-safety
+// over issuing Width*Height calls to DrawPixel.  Instead of spending time on the thread-safety
 // overhead Width*Height times, the entire operation is performed in bulk behind a single lock.
 //
 // The first element in "screen" is the top-left (0, 0) pixel.  The next is (1, 0) and so on,
@@ -438,7 +438,7 @@ void UseAntiAliasing(bool enabled)
     graphicsOther->SetSmoothingMode(enabled ? Gdiplus::SmoothingModeAntiAlias : Gdiplus::SmoothingModeNone);
 }
 
-void SetPixel(int x, int y, Color c)
+void DrawPixel(int x, int y, Color c)
 {
     if (x < 0 || x >= Width || y < 0 || y >= Height) return;
 
@@ -480,7 +480,7 @@ void Present(const std::vector<Color> &screen)
     dirty = true;
 }
 
-Color GetPixel(int x, int y)
+Color ReadPixel(int x, int y)
 {
     if (x < 0 || x >= Width || y < 0 || y >= Height) return Black;
 
@@ -645,10 +645,9 @@ void DrawString(int x, int y, const string &s, const Color c, bool centered, fun
     }
 }
 
-// Windows has their own SetPixel in global scope, so we need the static_cast to disambiguate from ours
 void DrawString(int x, int y, const string &s, const Color c, bool centered)
 {
-    DrawString(x, y, s, c, centered, static_cast<void(*)(int, int, Color)>(SetPixel));
+    DrawString(x, y, s, c, centered, DrawPixel);
 }
 
 void DrawString(int x, int y, const string &s, const string &fontName, int fontPtSize, const Color c, bool centered)

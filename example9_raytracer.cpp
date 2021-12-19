@@ -202,7 +202,7 @@ void run()
                     c = c + Vec(clamp(r.x), clamp(r.y), clamp(r.z))*.25;
                 }
             }
-            SetPixel(x, Height - y - 1, MakeColor(gamma(c.x), gamma(c.y), gamma(c.z)));
+            DrawPixel(x, Height - y - 1, MakeColor(gamma(c.x), gamma(c.y), gamma(c.z)));
         }
         Present();
     }

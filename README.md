@@ -8,7 +8,7 @@ There is **absolutely zero setup** or initialization.  (By default you get a 5x 
 #include "drawing.h"
 
 void run() {
-  SetPixel(80, 20, LightBlue);
+  DrawPixel(80, 20, LightBlue);
 }
 ```
 
