@@ -163,7 +163,6 @@ void velocityStep(vector<float> &u, vector<float> &v, vector<float> &u0, vector<
 
 
 // Secret functions from drawing.cpp!
-Color MakeColorHSV(int h, int s, int v);
 void Present(const vector<Color> &screen);
 void DrawString(int x, int y, const string &s, const Color c, bool centered, function<void(int x, int y, Color c)> customDraw);
 
@@ -177,11 +176,11 @@ Color FluidColor(float u, float v, float density, bool showVelocity)
     {
         int h = min(360, max(0, int(sqrt(u*u + v*v) * 1500.0)));
         int v = min(255, max(0, int(density * 500.0)));
-        return MakeColorHSV(h, 255, v);
+        return MakeColorHSB(h, 255, v);
     }
 
     const int value = min(360, max(0, int(density * 100.0f)));
-    return MakeColorHSV(max(0, value - 310), value / 2, value);
+    return MakeColorHSB(max(0, value - 310), value / 2, value);
 }
 
 // Returns a list of points between the given coordinates

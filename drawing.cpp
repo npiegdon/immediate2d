@@ -311,12 +311,6 @@ void SaveImage(unsigned int suffix)
 //
 
 
-// Creates a color using a (hue, saturation, value) triple instead of (red, green, blue).
-//
-// - S and V are in the usual [0, 256) range, but H is in degrees: [0, 360)
-//
-Color MakeColorHSV(int h, int s, int v);
-
 // If your program is going to be writing every pixel every frame, this is a simple optimization
 // over issuing Width*Height calls to DrawPixel.  Instead of spending time on the thread-safety
 // overhead Width*Height times, the entire operation is performed in bulk behind a single lock.
@@ -391,12 +385,12 @@ Color MakeColor(int r, int g, int b, int a)
 
 constexpr Color MakeColor(int r, int g, int b)
 {
-    return (0xFF << 24) | ((r & 0xFF) << 16) | ((g & 0xFF) << 8) | ((b & 0xFF) << 0);
+    return 0xFF000000 | ((r & 0xFF) << 16) | ((g & 0xFF) << 8) | ((b & 0xFF) << 0);
 }
 
-Color MakeColorHSV(int hue, int sat, int val)
+Color MakeColorHSB(int hue, int sat, int val)
 {
-    float h = fmod(hue / 360.0f, 1.0f);
+    float h = min(1.0f, max(0.0f, (hue % 360) / 360.0f));
     float s = min(1.0f, max(0.0f, sat / 255.0f));
     float v = min(1.0f, max(0.0f, val / 255.0f));
 

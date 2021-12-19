@@ -90,6 +90,22 @@ static const Color LightMagenta = MakeColor(255,  85, 255);
 static const Color Yellow =       MakeColor(255, 255,  85);
 static const Color White =        MakeColor(255, 255, 255);
 
+// MakeColorHSB is like MakeColor but instead of using red, green, and blue
+// values, you get to specify the hue.  This is ideal for making rainbows!
+//
+// hue is an angle (in degrees) between 0 and 360.
+// (0 is red, 30 is orange, 60 is yellow, 240 is blue...)
+//
+// saturation and brightness should be between 0 and 255.
+// 
+// saturation=0 makes everything grayscale.
+// saturation=255 will be the most vivid version of that color.
+//
+// brightness=0 is always black.
+// brightness=255 is the brightest version of that color.
+//
+Color MakeColorHSB(int hue, int saturation, int brightness);
+
 
 
 
