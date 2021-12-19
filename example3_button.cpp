@@ -15,7 +15,7 @@
 
 const int ButtonSize = 20;
 
-void main()
+void run()
 {
     int blueButtonX = 10;
     int blueButtonY = 90;

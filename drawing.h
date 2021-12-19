@@ -173,7 +173,7 @@ void Present();
 // was drawn most recently, forever.
 //
 // NOTE: If you're NOT ready to end your program, don't call this!  As a side-
-//       effect, your main function will be terminated immediately.
+//       effect, your run() function will be terminated immediately.
 //
 void CloseWindow();
 

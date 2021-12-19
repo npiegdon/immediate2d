@@ -1,13 +1,13 @@
 # Immediate2D Drawing Framework
-A C++ drawing framework for Windows that makes simple graphics programming as fun and easy as the days when computers booted directly to a BASIC prompt.
+A C++ drawing framework for Windows that makes simple graphics programming as much fun as the days when computers booted directly to a BASIC prompt.
 
-Made for beginners and classrooms.  To use this framework just drop "drawing.cpp" and "drawing.h" into a new "Win32" Visual Studio project and declare a `void main()` function.  Immediate2D will take care of the rest.
+Made for beginners and classrooms.  To use this framework: open Visual Studio, choose "Create a new project", select the "Windows Desktop Wizard" from the list, (give your project a name), choose "Desktop Application (.exe)" from the wizard, and check the "Empty Project" box.  Then, add **drawing.cpp**, **drawing.h**, and some new cpp file for your own code to the project.  Just, declare a `void run()` function and Immediate2D will take care of the rest.
 
 There is **absolutely zero setup** or initialization.  (By default you get a 5x scaled-up 160x120 window and can draw to it in your very first line of code:
 ```C++
 #include "drawing.h"
 
-void main() {
+void run() {
   SetPixel(80, 20, LightBlue);
 }
 ```

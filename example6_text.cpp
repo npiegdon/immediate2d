@@ -97,7 +97,7 @@ void DrawString(int x, int y, const std::string &s, const Color color)
     }
 }
 
-void main()
+void run()
 {
     DrawString(1, 1, "Simple Text Editor", LightGray);
 

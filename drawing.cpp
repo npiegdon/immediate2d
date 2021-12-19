@@ -75,7 +75,7 @@
 // that there is a lot of Windows-specific code here that creates a window and
 // relays your drawing commands to the screen using the GDI+ framework.
 //
-// Your main() function is actually launched in a separate thread so the Windows
+// Your run() function is actually launched in a separate thread so the Windows
 // code can keep running at the same time as your own.  This means that each of
 // the drawing functions have to be written to safely transfer your request to
 // the window's thread.  That "thread-safety" code may also look pretty strange.
@@ -146,7 +146,7 @@ static deque<MusicNote> musicQueue;
 static mutex inputLock;
 static deque<char> inputBuffer;
 
-extern void main();
+extern void run();
 
 void Present()
 {
@@ -846,7 +846,7 @@ int WINAPI WinMain(_In_ HINSTANCE instance, _In_opt_ HINSTANCE, _In_ LPSTR, _In_
     ShowWindow(wnd, cmdShow);
     UpdateWindow(wnd);
 
-    thread(main).detach();
+    thread(run).detach();
 
     auto lastDraw = high_resolution_clock::now();
 

@@ -366,7 +366,7 @@ void PlaySnakeDead() { for (int n : { 36, 37, 39, 36, 37, 34, 32 }) PlayMidiNote
 
 
 
-void main()
+void run()
 {
     DrawString(80, 10, "C + +    N i b b l e s", White, true);
     DrawLine(47, 17, 111, 17, 1, DarkGray);

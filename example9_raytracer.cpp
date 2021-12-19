@@ -17,7 +17,7 @@
 //    colors, reflection types, positions, etc.)
 //
 
-const int samples = 200;
+const int samples = 5000;
 
 //
 // smallpt, a Path Tracer by Kevin Beason, 2008
@@ -164,7 +164,7 @@ Vec radiance(const Ray &r, int depth)
         radiance(reflRay, depth)*Re + radiance(Ray{ x, tdir }, depth)*Tr);
 }
 
-void main()
+void run()
 {
     UseDoubleBuffering(true);
 

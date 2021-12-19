@@ -14,7 +14,7 @@
 // 4. Ensure the spacebar shortcut also uses the current background color when it clears the canvas
 //
 
-void main()
+void run()
 {
     // Add the built-in colors to a list so we can retrieve them by array index
     Color colors[16] = { Black, Blue, Green, Cyan, Red, Magenta, Brown, LightGray, DarkGray, LightBlue, LightGreen, LightCyan, LightRed, LightMagenta, Yellow, White };

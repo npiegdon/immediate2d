@@ -11,7 +11,7 @@
 // 3. Draw a mouth for your smiley face (4-6 more pixels), just below the eyes
 //
 
-void main()
+void run()
 {
     SetPixel(80, 60, Yellow);
 }

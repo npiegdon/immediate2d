@@ -214,7 +214,7 @@ void MouseDrag(vector<float> &field, int x1, int y1, int x2, int y2, float value
     for (auto p : points) field[id(p.first, p.second)] = value / points.size();
 }
 
-void main()
+void run()
 {
     const float dt = 0.1f;
     const float diffusion = 0.0f;

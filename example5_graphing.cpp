@@ -20,7 +20,7 @@ double f(double x)
     return sin(x);
 }
 
-void main()
+void run()
 {
     // Draw our axes
     DrawLine(0, Height / 2, Width, Height / 2, 1, DarkGray);

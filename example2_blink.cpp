@@ -10,7 +10,7 @@
 // 2. Draw a rectangle instead of a circle
 //
 
-void main()
+void run()
 {
     int x = 80;
     int y = 60;
