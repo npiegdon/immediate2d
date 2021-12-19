@@ -23,7 +23,7 @@ void run()
     // Loop forever
     while (true)
     {
-        DrawCircle(x, y, radius, Yellow, true);
+        DrawCircle(x, y, radius, Yellow, Brown);
         Wait(delay);
 
         Clear();

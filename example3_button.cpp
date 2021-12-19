@@ -24,13 +24,13 @@ void run()
     int greenButtonY = 90;
 
     // Draw our buttons with a nice bevel effect
-    DrawRectangle(blueButtonX,     blueButtonY,     ButtonSize,     ButtonSize,     DarkGray, true);
-    DrawRectangle(blueButtonX,     blueButtonY,     ButtonSize - 1, ButtonSize - 1, White,    true);
-    DrawRectangle(blueButtonX + 1, blueButtonY + 1, ButtonSize - 2, ButtonSize - 2, Blue,     true);
+    DrawRectangle(blueButtonX,     blueButtonY,     ButtonSize,     ButtonSize,     DarkGray);
+    DrawRectangle(blueButtonX,     blueButtonY,     ButtonSize - 1, ButtonSize - 1, White);
+    DrawRectangle(blueButtonX + 1, blueButtonY + 1, ButtonSize - 2, ButtonSize - 2, Blue);
 
-    DrawRectangle(greenButtonX,     greenButtonY,     ButtonSize,     ButtonSize,     DarkGray, true);
-    DrawRectangle(greenButtonX,     greenButtonY,     ButtonSize - 1, ButtonSize - 1, White,    true);
-    DrawRectangle(greenButtonX + 1, greenButtonY + 1, ButtonSize - 2, ButtonSize - 2, Green,    true);
+    DrawRectangle(greenButtonX,     greenButtonY,     ButtonSize,     ButtonSize,     DarkGray);
+    DrawRectangle(greenButtonX,     greenButtonY,     ButtonSize - 1, ButtonSize - 1, White);
+    DrawRectangle(greenButtonX + 1, greenButtonY + 1, ButtonSize - 2, ButtonSize - 2, Green);
 
     // Loop forever
     while (true)
@@ -48,14 +48,14 @@ void run()
         if (x >= blueButtonX && x < blueButtonX + ButtonSize
          && y >= blueButtonY && y < blueButtonY + ButtonSize)
         {
-            DrawRectangle(0, 0, Width, 80, Blue, true);
+            DrawRectangle(0, 0, Width, 80, Blue);
         }
 
         // Check if we're clicking the green button
         if (x >= greenButtonX && x < greenButtonX + ButtonSize
          && y >= greenButtonY && y < greenButtonY + ButtonSize)
         {
-            DrawRectangle(0, 0, Width, 80, Green, true);
+            DrawRectangle(0, 0, Width, 80, Green);
         }
     }
 }

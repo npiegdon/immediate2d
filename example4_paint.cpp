@@ -37,7 +37,7 @@ void run()
         // Halfway through our loop, start a second row of colors
         if (i >= 8) y += PaletteEntryHeight;
 
-        DrawRectangle(x, y, PaletteEntryWidth, PaletteEntryHeight, colors[i], true);
+        DrawRectangle(x, y, PaletteEntryWidth, PaletteEntryHeight, colors[i]);
     }
 
     // This holds the index to the currently selected color (from the "colors" list).
@@ -56,7 +56,7 @@ void run()
         const char key = LastKey();
 
         // The spacebar clears the canvas
-        if (key == ' ') DrawRectangle(0, CanvasY, Width, Height, Black, true);
+        if (key == ' ') DrawRectangle(0, CanvasY, Width, Height, Black);
 
         // Grab our current mouse coordinates
         const int x = MouseX();
@@ -88,7 +88,7 @@ void run()
             currentColor = row * 8 + col;
 
             // Show the new color on the screen
-            DrawRectangle(0, PaletteEntryHeight * 2 + 1, Width, PaletteEntryHeight, colors[currentColor], true);
+            DrawRectangle(0, PaletteEntryHeight * 2 + 1, Width, PaletteEntryHeight, colors[currentColor]);
         }
 
         // The rest of the loop is for drawing on the canvas, which we only

@@ -522,45 +522,45 @@ void DrawLine(float x1, float y1, float x2, float y2, int thickness, Color c)
     SetDirty();
 }
 
-void DrawCircle(int x, int y, int radius, Color c, bool filled)
+void DrawCircle(int x, int y, int radius, Color fill, Color stroke)
 {
     lock_guard<mutex> lock(bitmapLock);
     if (!graphics) return;
 
     Gdiplus::Rect r(x - radius, y - radius, radius * 2, radius * 2);
-    Gdiplus::Color color(c);
 
-    if (filled)
+    if (fill != Transparent)
     {
-        Gdiplus::SolidBrush brush(c);
+        Gdiplus::SolidBrush brush{ Gdiplus::Color(fill) };
         graphics->FillEllipse(&brush, r);
     }
-    else
+
+    if (stroke != Transparent)
     {
-        Gdiplus::Pen p(c);
-        graphics->DrawEllipse(&p, r);
+        Gdiplus::Pen pen{ Gdiplus::Color(stroke) };
+        graphics->DrawEllipse(&pen, r);
     }
 
     SetDirty();
 }
 
-void DrawCircle(float x, float y, float radius, Color c, bool filled)
+void DrawCircle(float x, float y, float radius, Color fill, Color stroke)
 {
     lock_guard<mutex> lock(bitmapLock);
     if (!graphics) return;
 
     Gdiplus::RectF r(x - radius, y - radius, radius * 2, radius * 2);
-    Gdiplus::Color color(c);
 
-    if (filled)
+    if (fill != Transparent)
     {
-        Gdiplus::SolidBrush brush(c);
+        Gdiplus::SolidBrush brush{ Gdiplus::Color(fill) };
         graphics->FillEllipse(&brush, r);
     }
-    else
+
+    if (stroke != Transparent)
     {
-        Gdiplus::Pen p(c);
-        graphics->DrawEllipse(&p, r);
+        Gdiplus::Pen pen{ Gdiplus::Color(stroke) };
+        graphics->DrawEllipse(&pen, r);
     }
 
     SetDirty();
@@ -594,27 +594,27 @@ void Draw(std::function<void(Gdiplus::Graphics &g)> f)
     SetDirty();
 }
 
-void DrawRectangle(int x, int y, int width, int height, Color c, bool filled)
+void DrawRectangle(int x, int y, int width, int height, Color fill, Color stroke)
 {
     lock_guard<mutex> lock(bitmapLock);
     if (!graphics) return;
 
     // GDI+'s DrawRectangle and FillRectangle behave a little differently: One
     // of them treats the end coordinates as inclusive and the other exclusive
-    const int adjustment = filled ? 0 : -1;
+    const int adjustment = fill != Transparent ? 0 : -1;
 
     Gdiplus::Rect r(x, y, width + adjustment, height + adjustment);
-    Gdiplus::Color color(c);
 
-    if (filled)
+    if (fill != Transparent)
     {
-        Gdiplus::SolidBrush brush(c);
+        Gdiplus::SolidBrush brush{ Gdiplus::Color(fill) };
         graphics->FillRectangle(&brush, r);
     }
-    else
+
+    if (stroke != Transparent)
     {
-        Gdiplus::Pen p(c);
-        graphics->DrawRectangle(&p, r);
+        Gdiplus::Pen pen{ Gdiplus::Color(stroke) };
+        graphics->DrawRectangle(&pen, r);
     }
 
     SetDirty();

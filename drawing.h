@@ -113,15 +113,17 @@ void DrawPixel(int x, int y, Color c);
 // (in pixels) in the given color.
 void DrawLine(int x1, int y1, int x2, int y2, int thickness, Color c);
 
-// Draws a circle centered at (x, y) with a given radius (in pixels).  The
-// filled parameter controls whether to draw a single pixel outline or to
-// completely fill the circle with the passed-in color.
-void DrawCircle(int x, int y, int radius, Color c, bool filled);
+// Draws a circle centered at (x, y) with a given radius (in pixels).  Specify
+// both the fill (inside) and stroke (single pixel border) colors.  To skip
+// drawing either the stroke or fill, set its color to Transparent.
+void DrawCircle(int x, int y, int radius, Color fill, Color stroke = Transparent);
 
 // Draws a rectangle with upper-left corner at (x, y) with the given width
-// and height.  The filled parameter controls whether to draw a single pixel
-// outline or to completely fill the rectangle with the passed-in color.
-void DrawRectangle(int x, int y, int width, int height, Color c, bool filled);
+// and height. The fill color will cause the inside of the rectangle to filled
+// with that color.  The stroke color will be used to draw a single pixel
+// border.  To skip drawing either the border or filling the inside, set that
+// color to Transparent.
+void DrawRectangle(int x, int y, int width, int height, Color fill, Color stroke = Transparent);
 
 
 // Clears the screen to the given color (or Black if no color passed in).

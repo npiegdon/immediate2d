@@ -114,7 +114,7 @@ void run()
         if (key == 0) continue;
 
         // Erase the old cursor
-        DrawRectangle(cursorX, cursorY, 3, 5, Black, true);
+        DrawRectangle(cursorX, cursorY, 3, 5, Black);
 
         // Draw the character for the pressed key (keeping track of how wide it was)
         int width = DrawCharacter(cursorX, cursorY, key, LightGreen);
@@ -123,6 +123,6 @@ void run()
         if (width > 0) cursorX += width + 1;
 
         // Redraw the cursor in the (potentially) new location
-        DrawRectangle(cursorX, cursorY, 3, 5, Green, true);
+        DrawRectangle(cursorX, cursorY, 3, 5, Green);
     }
 }

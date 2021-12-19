@@ -297,8 +297,8 @@ void DrawScores(int playerCount)
     if (playerCount > 0) DrawString(  5, 3,               to_string(snakes[0].score) + " <-- Sammy", snakes[0].color);
     if (playerCount > 1) DrawString(110, 3, "Jake --> " + to_string(snakes[1].score),                snakes[1].color);
 
-    for (int i = 0; i < snakes[0].lives - 1; ++i) DrawRectangle(  2 + i * 6, 114, 4, 2, snakes[0].color, true);
-    for (int i = 0; i < snakes[1].lives - 1; ++i) DrawRectangle(154 - i * 6, 114, 4, 2, snakes[1].color, true);
+    for (int i = 0; i < snakes[0].lives - 1; ++i) DrawRectangle(  2 + i * 6, 114, 4, 2, snakes[0].color);
+    for (int i = 0; i < snakes[1].lives - 1; ++i) DrawRectangle(154 - i * 6, 114, 4, 2, snakes[1].color);
 }
 
 bool GameOverPlayAgain()
@@ -306,9 +306,9 @@ bool GameOverPlayAgain()
     // Discard any pre-existing input
     LastKey();
 
-    DrawRectangle(41, 41, 80, 40, Black, true);
-    DrawRectangle(40, 40, 80, 40, DarkGray, true);
-    DrawRectangle(40, 40, 80, 40, LightGray, false);
+    DrawRectangle(41, 41, 80, 40, Black);
+    DrawRectangle(40, 40, 80, 40, DarkGray);
+    DrawRectangle(40, 40, 80, 40, Transparent, LightGray);
     DrawString(80, 50, "G A M E   O V E R", LightGray, true);
     DrawString(80, 66, "Play Again? (Y/N)", White, true);
 
