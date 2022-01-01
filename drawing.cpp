@@ -6,34 +6,10 @@
 // A drawing framework for Windows that makes simple graphics programming as
 // fun and easy as the days when computers booted directly to a BASIC prompt
 //
-///////////////////////////////////////////////////////////////////////////////
-
-//
 // This is free and unencumbered software released into the public domain.
+// See the full notice at the end of the file.
 //
-// Anyone is free to copy, modify, publish, use, compile, sell, or
-// distribute this software, either in source code form or as a compiled
-// binary, for any purpose, commercial or non - commercial, and by any
-// means.
-//
-// In jurisdictions that recognize copyright laws, the author or authors
-// of this software dedicate any and all copyright interest in the
-// software to the public domain. We make this dedication for the benefit
-// of the public at large and to the detriment of our heirs and
-// successors. We intend this dedication to be an overt act of
-// relinquishment in perpetuity of all present and future rights to this
-// software under copyright law.
-//
-// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
-// EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
-// MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
-// IN NO EVENT SHALL THE AUTHORS BE LIABLE FOR ANY CLAIM, DAMAGES OR
-// OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE,
-// ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
-// OTHER DEALINGS IN THE SOFTWARE.
-//
-// For more information, please refer to <http://unlicense.org/>
-//
+///////////////////////////////////////////////////////////////////////////////
 
 
 //
@@ -56,55 +32,14 @@
 #include <algorithm>
 #include <functional>
 
-
-
-
-
-///////////////////////////////////////////////////////////////////////////////
-//
-//           YOU SHOULD BE READING "drawing.h" INSTEAD OF THIS FILE!
-//
-///////////////////////////////////////////////////////////////////////////////
-
-//
-// There aren't really any user-serviceable parts in here. If you're a complete
-// beginner in C++ (which makes you the intended audience), trying to read this
-// file might be a little overwhelming.
-//
-// If you're interested in what's going on under the hood, the short version is
-// that there is a lot of Windows-specific code here that creates a window and
-// relays your drawing commands to the screen using the GDI+ framework.
-//
-// Your run() function is actually launched in a separate thread so the Windows
-// code can keep running at the same time as your own.  This means that each of
-// the drawing functions have to be written to safely transfer your request to
-// the window's thread.  That "thread-safety" code may also look pretty strange.
-//
-
-
-
-
-
-
-
-
-//
-// Read on at your own peril!  :)
-//
-
-
-
-
-
-
-
-
+// The standard library's min/max algorithms conflict with Microsoft's
+// min/max macros, but if you define NOMINMAX, the Windows header omits them.
 #define NOMINMAX
 #include <Windows.h>
 #include <Windowsx.h>
 #include <Shlobj.h>
 
-// We have to go through a few gyrations to avoid the built-in Windows min/max macros (which GDI+ uses)
+// GDI+ uses the min/max macros, so we have to work around disabling them.
 namespace Gdiplus { using std::min; using std::max; }
 #include <GdiPlus.h>
 
@@ -301,15 +236,6 @@ void SaveImage(unsigned int suffix)
 
 
 
-//
-// If you've made it this far and you're still reading, here is a reward: secret functions!
-//
-// To avoid cluttering drawing.h (the whole point is to keep things as simple as possible and
-// avoid overwhelming beginners), these extra-optional features were omitted from the header
-// in the name of simplicity!  But, you can still use them just by copying the following
-// declarations near the top of your main.cpp file:
-//
-
 
 // If your program is going to be writing every pixel every frame, this is a simple optimization
 // over issuing Width*Height calls to DrawPixel.  Instead of spending time on the thread-safety
@@ -333,49 +259,12 @@ void SaveImage(unsigned int suffix)
 //
 void Present(const std::vector<Color> &screen);
 
-// Sometimes immediate input (where the most-recent keypress overwrites all others) isn't the
-// best fit.  If you don't want to miss any input, use this instead of LastKey.  Up to one
-// hundred or so of the most recent keypresses are stored in a queue and can be retrieved
-// one-by-one by calling this until it returns 0 (which indicates the input queue is empty).
-//
-// NOTE: This operates completely independently from LastKey.  The same input will be reported
-//       by both functions separately.
-//
-char LastBufferedKey();
-
-// Use in conjunction with LastBufferedKey.  If you haven't called LastBufferedKey in a while
-// and would like to ignore any input that has come in since the last call (or since your
-// program started running), call this to wipe out the contents of the input queue.
-void ClearInputBuffer();
-
 // This is the same DrawString from the Text example, available here so other examples (or you)
 // can use it without a lot of distracting copy-paste.
 void DrawString(int x, int y, const std::string &s, const Color c, bool centered = false);
 
-// This DrawString uses the system's built-in font rendering and can handle UTF-8 strings to
-// print Unicode characters in any size using any font installed on the system.
-void DrawString(int x, int y, const std::string &s, const std::string &fontName, int fontPtSize, const Color c, bool centered = false);
-
-// This is very similar to the other drawing calls, but for portions of a circle
-void DrawArc(int x, int y, float radius, float thickness, Color c, float startRadians, float endRadians);
-
 // Lets you draw using the raw GDI+ Graphics object if that's something you're interested in
 void Draw(std::function<void(Gdiplus::Graphics &g)> f);
-
-// This is kind of out of the scope of a drawing framework, but it's too much fun not to include!
-//
-// Uses the built-in Microsoft MIDI synth to play music notes in the background.  Only one note
-// is ever played at once (monophonic) and notes are played back-to-back as they're queued by
-// this function.  (Use a noteId of 0 to indicate a rest of a certain duration.)
-//
-// The note ID for middle C is 60 and they proceed chromatically.  So 61 is the C# above middle C
-//
-void PlayMidiNote(int noteId, int milliseconds);
-
-// Because MIDI notes are queued and played sequentially in the background, you may need to
-// interrupt whatever is currently playing in order to play something more important.
-void ResetMusic();
-
 
 
 Color MakeColor(int r, int g, int b, int a)
@@ -644,9 +533,10 @@ void DrawString(int x, int y, const string &s, const Color c, bool centered)
     DrawString(x, y, s, c, centered, DrawPixel);
 }
 
-void DrawString(int x, int y, const string &s, const string &fontName, int fontPtSize, const Color c, bool centered)
+void DrawString(int x, int y, const char *text, const char *fontName, int fontPtSize, const Color c, bool centered)
 {
-    if (fontPtSize < 1 || s.empty()) return;
+    if (!text || !fontName) return;
+    if (fontPtSize < 1 || !text[0]) return;
 
     lock_guard<mutex> lock(bitmapLock);
     if (!graphics) return;
@@ -661,7 +551,7 @@ void DrawString(int x, int y, const string &s, const string &fontName, int fontP
         return &fonts[key];
     };
 
-    const auto wide = ToWide(s);
+    const auto wide = ToWide(text);
     const auto font = getFont(fontName, fontPtSize);
     const Gdiplus::SolidBrush brush(c);
     const Gdiplus::PointF origin{ static_cast<Gdiplus::REAL>(x), static_cast<Gdiplus::REAL>(y) };
@@ -683,7 +573,7 @@ void Clear(Color c)
     SetDirty();
 }
 
-void PlayMidiNote(int noteId, int ms)
+void PlayMusic(int noteId, int ms)
 {
     if (noteId < 0 || ms < 0) return;
 
@@ -887,3 +777,36 @@ int WINAPI WinMain(_In_ HINSTANCE instance, _In_opt_ HINSTANCE, _In_ LPSTR, _In_
 
     return (UINT)message.wParam;
 }
+
+
+
+
+
+
+
+//
+// This is free and unencumbered software released into the public domain.
+//
+// Anyone is free to copy, modify, publish, use, compile, sell, or
+// distribute this software, either in source code form or as a compiled
+// binary, for any purpose, commercial or non - commercial, and by any
+// means.
+//
+// In jurisdictions that recognize copyright laws, the author or authors
+// of this software dedicate any and all copyright interest in the
+// software to the public domain. We make this dedication for the benefit
+// of the public at large and to the detriment of our heirs and
+// successors. We intend this dedication to be an overt act of
+// relinquishment in perpetuity of all present and future rights to this
+// software under copyright law.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+// EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+// MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+// IN NO EVENT SHALL THE AUTHORS BE LIABLE FOR ANY CLAIM, DAMAGES OR
+// OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE,
+// ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
+// OTHER DEALINGS IN THE SOFTWARE.
+//
+// For more information, please refer to <http://unlicense.org/>
+//

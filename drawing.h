@@ -54,10 +54,6 @@ static constexpr int PixelScale = 5;
 
 
 
-// A useful constant (2*pi) to help with trigonometry or circles.
-static constexpr double Tau = 6.283185307179586476925286766559;
-
-
 
 ///////////////////////////////////////////////////////////////////////////////
 // Color
@@ -110,6 +106,23 @@ Color MakeColorHSB(int hue, int saturation, int brightness);
 
 
 ///////////////////////////////////////////////////////////////////////////////
+// Math Helpers
+///////////////////////////////////////////////////////////////////////////////
+
+
+// The number of radians in a complete circle (equal to 2*pi).
+static constexpr double Tau = 6.283185307179586476925286766559;
+
+// To find out how many radians there are in 45 degrees, call Radians(45).
+static constexpr double Radians(double degrees) { return Tau / 360.0; }
+
+// To find out how many degrees there are in half a circle, call Degrees(Tau / 2).
+static constexpr double Degrees(double radians) { return 360.0 / Tau; }
+
+
+
+
+///////////////////////////////////////////////////////////////////////////////
 // Drawing
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -129,17 +142,27 @@ void DrawPixel(int x, int y, Color c);
 // (in pixels) in the given color.
 void DrawLine(int x1, int y1, int x2, int y2, int thickness, Color c);
 
-// Draws a circle centered at (x, y) with a given radius (in pixels).  Specify
-// both the fill (inside) and stroke (single pixel border) colors.  To skip
-// drawing either the stroke or fill, set its color to Transparent.
-void DrawCircle(int x, int y, int radius, Color fill, Color stroke = Transparent);
-
 // Draws a rectangle with upper-left corner at (x, y) with the given width
 // and height. The fill color will cause the inside of the rectangle to filled
 // with that color.  The stroke color will be used to draw a single pixel
 // border.  To skip drawing either the border or filling the inside, set that
 // color to Transparent.
 void DrawRectangle(int x, int y, int width, int height, Color fill, Color stroke = Transparent);
+
+// Draws a circle centered at (x, y) with a given radius (in pixels).  Specify
+// both the fill (inside) and stroke (single pixel border) colors.  To skip
+// drawing either the stroke or fill, set its color to Transparent.
+void DrawCircle(int x, int y, int radius, Color fill, Color stroke = Transparent);
+
+// Draws a piece of a circle centered at (x, y) with the given stroke thickness.
+// The piece of the circle you get is determined by the start and end radians.
+// Zero radians is at the right-hand side of the circle and they increase upward.
+// 0 for startRadians and Tau/2 for endRadians would draw the top half of a circle.
+void DrawArc(int x, int y, float radius, float thickness, Color stroke, float startRadians, float endRadians);
+
+// Prints text at (x, y) using the given font and size (in points).  It is normally
+// left-justified but can be horizontally centered on x by passing true for centered.
+void DrawString(int x, int y, const char *text, const char *fontName, int fontSizePt, const Color c, bool centered = false);
 
 
 // Clears the screen to the given color (or Black if no color passed in).
@@ -237,13 +260,8 @@ void Wait(int milliseconds);
 
 
 ///////////////////////////////////////////////////////////////////////////////
-// Interactivity (Mouse & Keyboard)
+// Keyboard Input
 ///////////////////////////////////////////////////////////////////////////////
-
-
-// In order to make good use of mouse and keyboard input, you'll want to set up
-// your program so that input is checked and drawing is performed repeatedly,
-// in a loop.  Game programmers usually call this the "game loop".
 
 
 // Returns the most recently pressed keyboard character.  For special, non-
@@ -252,7 +270,7 @@ void Wait(int milliseconds);
 // NOTE: To avoid reporting the same key press forever, this function only
 //       returns the value ONCE and will subsequently report a value of zero
 //       until the next key is pressed.  If you need to use this value more
-//       than once, store it in a variable first!
+//       than once, store the result in a variable first!
 //
 char LastKey();
 
@@ -281,6 +299,38 @@ enum Keys
 };
 
 
+// Sometimes immediate input (where only the most-recent keypress is available) isn't
+// the best fit.  If you don't want to miss any input, use this instead of LastKey.
+// This is useful for reading typing input or fast arrow keys.
+//
+// Each call will return the next keypress in the stored list and then remove that
+// entry from the list.  Calling this when no more input is available will return 0.
+//
+// Up to one hundred key presses can be recorded internally without calling this before
+// they'll begin to be lost the same way LastKey loses all but the most recent key.
+//
+// NOTE: This works completely independently from LastKey.  The same input will be
+//       reported by both functions separately.
+//
+char LastBufferedKey();
+
+// If you haven't called LastBufferedKey in a while and would like to ignore any input
+// that has come in since the last call (or since your program started running), call
+// this to wipe out the internal list of recorded input.
+void ClearInputBuffer();
+
+
+
+
+///////////////////////////////////////////////////////////////////////////////
+// Mouse Input
+///////////////////////////////////////////////////////////////////////////////
+
+// In order to make good use of mouse input, you'll want to set up your
+// program so that input is checked and drawing is performed repeatedly,
+// in a loop.  Game programmers usually call this the "game loop".
+
+
 // Is the mouse button currently being held down?
 bool LeftMousePressed();
 bool RightMousePressed();
@@ -290,3 +340,33 @@ bool MiddleMousePressed();
 // the drawing surface), or -1 if the mouse cursor isn't inside our window.
 int MouseX();
 int MouseY();
+
+
+
+
+///////////////////////////////////////////////////////////////////////////////
+// Music!
+///////////////////////////////////////////////////////////////////////////////
+
+
+// Play a music note (or rest) in the background.  Notes (or rests) are played
+// one by one, back-to-back as they're queued by this function.  So you may
+// send all the notes for a song and they'll be played in turn with the right
+// timing automatically while your code continues to run normally.
+//
+// noteId 60 is middle C.
+// noteId 61 is the C# just above that.
+// noteId 62 is the D just above that.
+//
+// Use noteId 0 for a rest (no sound; just a pause in the music).
+//
+// noteId 21 is the lowest key on an 88 key piano.
+// noteId 108 is the highest key on an 88 key piano.
+//
+// There are 1000 milliseconds in one second.
+//
+void PlayMusic(int noteId, int milliseconds);
+
+// Clears all queued notes/rests.  This is useful if you need to play
+// something more important before your current song has ended.
+void ResetMusic();

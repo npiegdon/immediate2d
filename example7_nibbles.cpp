@@ -26,15 +26,12 @@ struct Snake
     Color color;
 };
 
-// The snakes (and the screen) are our only real global state
+// The snakes (and the pixels on the screen) are our only real global state
 Snake snakes[2];
 
 
 // Secret functions from drawing.cpp!
-char LastBufferedKey();
-void ClearInputBuffer();
 void DrawString(int x, int y, const string &s, const Color c, bool centered = false);
-void PlayMidiNote(int noteId, int milliseconds);
 
 // We draw the play field at double-size to reach the 80x50 size of the original
 void SetBigPixel(int x, int y, Color c)
@@ -353,16 +350,16 @@ constexpr int Duration32 = BeatsPerMs * 1 / 8;
 // Nothing to see here except lists of music note IDs (60 is middle C)
 void PlayTitleMusic()
 {
-    for (int n : { 0, 48, 50, 52, 50, 48, 50 }) PlayMidiNote(n, Duration8);
-    for (int n : { 52, 48, 48 }) PlayMidiNote(n, Duration4);
+    for (int n : { 0, 48, 50, 52, 50, 48, 50 }) PlayMusic(n, Duration8);
+    for (int n : { 52, 48, 48 }) PlayMusic(n, Duration4);
 }
 void PlayLevelStart()
 {
-    for (int n : { 60, 62, 64, 62, 60, 62 }) PlayMidiNote(n, Duration20);
-    for (int n : { 64, 60, 60 }) PlayMidiNote(n, Duration10);
+    for (int n : { 60, 62, 64, 62, 60, 62 }) PlayMusic(n, Duration20);
+    for (int n : { 64, 60, 60 }) PlayMusic(n, Duration10);
 }
-void PlayApplePickup() { for (int n : { 48, 48, 48, 52 }) PlayMidiNote(n, Duration16); }
-void PlaySnakeDead() { for (int n : { 36, 37, 39, 36, 37, 34, 32 }) PlayMidiNote(n, Duration32); }
+void PlayApplePickup() { for (int n : { 48, 48, 48, 52 }) PlayMusic(n, Duration16); }
+void PlaySnakeDead() { for (int n : { 36, 37, 39, 36, 37, 34, 32 }) PlayMusic(n, Duration32); }
 
 
 
