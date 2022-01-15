@@ -438,10 +438,10 @@ extern const int PixelScale;
 #include <map>
 #include <mutex>
 #include <deque>
+#include <vector>
 #include <string>
 #include <atomic>
 #include <memory>
-#include <random>
 #include <numeric>
 #include <algorithm>
 
@@ -584,7 +584,7 @@ static void imm2d_AddBufferedKey(char c)
 // For random coordinates/colors in a tight loop, this outperforms std::mt19937 by a mile
 //
 uint64_t imm2d_xoroshiro128plus(void) {
-    static uint64_t s[2] = { 1, std::random_device()() };
+    static uint64_t s[2] = { 1, static_cast<uint64_t>(time(NULL)) };
     auto rotl = [](const uint64_t x, int k) { return (x << k) | (x >> (64 - k)); };
 
     const uint64_t s0 = s[0];
