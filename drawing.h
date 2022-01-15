@@ -177,8 +177,11 @@ Color ReadPixel(int x, int y);
 
 
 // OPTIONAL!  Anti-aliasing is a graphics technique to make your lines and
-// circles appear with smooth/soft edges.
-void UseAntiAliasing(bool enabled);
+// circles appear with smooth/soft edges.  These can be called at any time
+// to change the way the other drawing functions behave.
+void UseAntiAliasing();
+void StopAntiAliasing();
+
 
 // OPTIONAL!  Things are normally drawn to the screen just as your drawing
 // code is run.  This works fine until you have very intricate scenes that

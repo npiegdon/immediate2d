@@ -18,7 +18,7 @@ void run()
     int delay = 1000;
 
     // Draw shapes with smooth edges
-    UseAntiAliasing(true);
+    UseAntiAliasing();
 
     // Loop forever
     while (true)

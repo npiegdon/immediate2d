@@ -308,7 +308,7 @@ Color MakeColorHSB(int hue, int sat, int val)
     return MakeColor(int(var_r * 255), int(var_g * 255), int(var_b * 255));
 }
 
-void UseAntiAliasing(bool enabled)
+void imm2d_setAntiAliasing(bool enabled)
 {
     lock_guard<mutex> lock(bitmapLock);
     if (!graphics) return;
@@ -316,6 +316,10 @@ void UseAntiAliasing(bool enabled)
     graphics->SetSmoothingMode(enabled ? Gdiplus::SmoothingModeAntiAlias : Gdiplus::SmoothingModeNone);
     graphicsOther->SetSmoothingMode(enabled ? Gdiplus::SmoothingModeAntiAlias : Gdiplus::SmoothingModeNone);
 }
+
+void UseAntiAliasing() { imm2d_setAntiAliasing(true); }
+void StopAntiAliasing() { imm2d_setAntiAliasing(false); }
+
 
 void DrawPixel(int x, int y, Color c)
 {
@@ -689,7 +693,7 @@ int WINAPI WinMain(_In_ HINSTANCE instance, _In_opt_ HINSTANCE, _In_ LPSTR, _In_
     bitmapOther = make_unique<Gdiplus::Bitmap>(Width, Height);
     graphics = make_unique<Gdiplus::Graphics>(bitmap.get());
     graphicsOther = make_unique<Gdiplus::Graphics>(bitmapOther.get());
-    UseAntiAliasing(false);
+    StopAntiAliasing();
     Clear();
 
     ShowWindow(wnd, cmdShow);
