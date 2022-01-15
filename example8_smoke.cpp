@@ -1,7 +1,6 @@
 #include "drawing.h"
 
 #include <vector>
-#include <functional>
 #include <algorithm>
 using namespace std;
 
@@ -162,9 +161,8 @@ void velocityStep(vector<float> &u, vector<float> &v, vector<float> &u0, vector<
 
 
 
-// Secret functions from drawing.cpp!
+// We use a secret function from drawing.cpp that lets us update every pixel at once
 void Present(const vector<Color> &screen);
-void DrawString(int x, int y, const string &s, const Color c, bool centered, function<void(int x, int y, Color c)> customDraw);
 
 // Generate a color based on our preferred visualization
 Color FluidColor(float u, float v, float density, bool showVelocity)
@@ -210,7 +208,36 @@ void MouseDrag(vector<float> &field, int x1, int y1, int x2, int y2, float value
     // velocity and density vector fields with single points, it makes the interaction more fun if
     // we scratch out an entire line segment between the previous and current mouse coordinates
     const auto points = Line(x1, y1, x2, y2);
-    for (auto p : points) field[id(p.first, p.second)] = value / points.size();
+    for (const auto &p : points) field[id(p.first, p.second)] = value / points.size();
+}
+
+// For a line-by-line breakdown of this single-function text rendering library,
+// see the Text example.  (This version has been compacted a bit and made a
+// little more generic so we can draw directly into the density field in this smoke example.)
+void DrawString(vector<float> &density, int y, const char *s)
+{
+    static constexpr uint32_t Font[128 - 32] = {
+        0x10000000, 0x10000017, 0x30000C03, 0x50AFABEA, 0x509AFEB2, 0x30004C99, 0x400A26AA, 0x10000003, 0x2000022E, 0x200001D1, 0x30001445, 0x300011C4, 0x10000018, 0x30001084, 0x10000010, 0x30000C98,
+        0x30003A2E, 0x300043F2, 0x30004AB9, 0x30006EB1, 0x30007C87, 0x300026B7, 0x300076BF, 0x30007C21, 0x30006EBB, 0x30007EB7, 0x1000000A, 0x1000001A, 0x30004544, 0x4005294A, 0x30001151, 0x30000AA1,
+        0x506ADE2E, 0x300078BE, 0x30002ABF, 0x3000462E, 0x30003A3F, 0x300046BF, 0x300004BF, 0x3000662E, 0x30007C9F, 0x1000001F, 0x30003E08, 0x30006C9F, 0x3000421F, 0x51F1105F, 0x51F4105F, 0x4007462E,
+        0x300008BF, 0x400F662E, 0x300068BF, 0x300026B2, 0x300007E1, 0x30007E1F, 0x30003E0F, 0x50F8320F, 0x30006C9B, 0x30000F83, 0x30004EB9, 0x2000023F, 0x30006083, 0x200003F1, 0x30000822, 0x30004210,
+        0x20000041, 0x300078BE, 0x30002ABF, 0x3000462E, 0x30003A3F, 0x300046BF, 0x300004BF, 0x3000662E, 0x30007C9F, 0x1000001F, 0x30003E08, 0x30006C9F, 0x3000421F, 0x51F1105F, 0x51F4105F, 0x4007462E,
+        0x300008BF, 0x400F662E, 0x300068BF, 0x300026B2, 0x300007E1, 0x30007E1F, 0x30003E0F, 0x50F8320F, 0x30006C9B, 0x30000F83, 0x30004EB9, 0x30004764, 0x1000001F, 0x30001371, 0x50441044, 0x00000000,
+    };
+
+    // Center the line
+    int textWidth = 0;
+    for (const char *i = s; *i; ++i) textWidth += (*i < 32 ? 0 : (Font[*i - 32] >> 28) + 1);
+    int x = (Width - textWidth) / 2;
+
+    for (const char *i = s; *i; ++i)
+    {
+        if (*i < 32 || *i > 127) continue;
+        uint32_t glyph = Font[*i - 32];
+        const int width = glyph >> 28;
+        for (int u = x; u < x + width; ++u) for (int v = y; v < y + 5; ++v, glyph = glyph >> 1) if ((glyph & 1) == 1) density[id(u, v)] = 3.0f;
+        if (width > 0) x += width + 1;
+    }
 }
 
 void run()
@@ -221,12 +248,11 @@ void run()
     vector<float> u(Size), v(Size), uPrev(Size), vPrev(Size), density(Size), densityPrev(Size);
     vector<Color> screen(Width * Height);
 
-    auto drawToSmoke = [&density](int x, int y, Color c) { density[id(x, y)] = 3.0f; };
-    DrawString(Width / 2, 1 * Height / 7, "Left mouse drag to move air",          0, true, drawToSmoke);
-    DrawString(Width / 2, 2 * Height / 7, "Right mouse drag to add smoke",        0, true, drawToSmoke);
-    DrawString(Width / 2, 3 * Height / 7, "Holding both is the most fun!",        0, true, drawToSmoke);
-    DrawString(Width / 2, 5 * Height / 7, "Use spacebar to toggle velocity view", 0, true, drawToSmoke);
-    DrawString(Width / 2, 6 * Height / 7, "(Press 'C' to clear the screen)",      0, true, drawToSmoke);
+    DrawString(density, 1 * Height / 7, "Left mouse drag to move air");
+    DrawString(density, 2 * Height / 7, "Right mouse drag to add smoke");
+    DrawString(density, 3 * Height / 7, "Holding both is the most fun!");
+    DrawString(density, 5 * Height / 7, "Use spacebar to toggle velocity view");
+    DrawString(density, 6 * Height / 7, "(Press 'C' to clear the screen)");
 
     bool showVelocity = false;
     bool mouseWasDown = false;
