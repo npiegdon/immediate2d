@@ -20,7 +20,7 @@
 //    colors, reflection types, positions, etc.)
 //
 
-const int samples = 5000;
+const int samples = 200;
 
 //
 // smallpt, a Path Tracer by Kevin Beason, 2008
