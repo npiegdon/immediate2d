@@ -475,10 +475,11 @@ namespace Gdiplus { using std::min; using std::max; }
 #include <GdiPlus.h>
 
 // This instructs Visual Studio to add these to the list of libraries we link against
+#pragma comment(lib, "Ole32.lib")
+#pragma comment(lib, "winmm.lib")
 #pragma comment(lib, "gdi32.lib")
 #pragma comment(lib, "user32.lib")
 #pragma comment(lib, "gdiplus.lib")
-#pragma comment(lib, "winmm.lib")
 #pragma comment(lib, "Shell32.lib")
 
 extern void run();
@@ -1097,19 +1098,19 @@ static LRESULT CALLBACK imm2d_WndProc(HWND wnd, UINT msg, WPARAM w, LPARAM l)
 
 int WINAPI WinMain(_In_ HINSTANCE instance, _In_opt_ HINSTANCE, _In_ LPSTR, _In_ int cmdShow)
 {
-    if (Width <= 0) { MessageBox(0, L"IMM2D_WIDTH must be greater than 0.", L"Bad Width", MB_ICONERROR); return 1; }
-    if (Height <= 0) { MessageBox(0, L"IMM2D_HEIGHT must be greater than 0.", L"Bad Width", MB_ICONERROR); return 1; }
-    if (PixelScale <= 0) { MessageBox(0, L"IMM2D_SCALE must be greater than 0.", L"Bad Width", MB_ICONERROR); return 1; }
+    if (Width <= 0) { MessageBox(0, TEXT("IMM2D_WIDTH must be greater than 0."), TEXT("Bad Width"), MB_ICONERROR); return 1; }
+    if (Height <= 0) { MessageBox(0, TEXT("IMM2D_HEIGHT must be greater than 0."), TEXT("Bad Height"), MB_ICONERROR); return 1; }
+    if (PixelScale <= 0) { MessageBox(0, TEXT("IMM2D_SCALE must be greater than 0."), TEXT("Bad PixelScale"), MB_ICONERROR); return 1; }
 
-    WNDCLASSW wc{ CS_OWNDC, imm2d_WndProc, 0, 0, instance, LoadIcon(nullptr, IDI_APPLICATION), LoadCursor(nullptr, IDC_ARROW), (HBRUSH)(COLOR_WINDOW + 1), nullptr, L"Immediate2D" };
-    if (!RegisterClassW(&wc)) return 1;
+    WNDCLASS wc{ CS_OWNDC, imm2d_WndProc, 0, 0, instance, LoadIcon(nullptr, IDI_APPLICATION), LoadCursor(nullptr, IDC_ARROW), (HBRUSH)(COLOR_WINDOW + 1), nullptr, TEXT("Immediate2D") };
+    if (!RegisterClass(&wc)) return 1;
 
     const DWORD style = WS_OVERLAPPED | WS_SYSMENU | WS_CAPTION;
 
     RECT r{ 0, 0, Width * PixelScale, Height * PixelScale };
     AdjustWindowRect(&r, style, FALSE);
 
-    HWND wnd = CreateWindowW(L"Immediate2D", L"Immediate2D", style, CW_USEDEFAULT, CW_USEDEFAULT, r.right - r.left, r.bottom - r.top, nullptr, nullptr, instance, nullptr);
+    HWND wnd = CreateWindow(TEXT("Immediate2D"), TEXT("Immediate2D"), style, CW_USEDEFAULT, CW_USEDEFAULT, r.right - r.left, r.bottom - r.top, nullptr, nullptr, instance, nullptr);
     if (wnd == nullptr) return 1;
 
     ULONG_PTR gdiPlusToken;
