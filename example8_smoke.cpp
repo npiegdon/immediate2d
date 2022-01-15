@@ -1,4 +1,6 @@
-#include "drawing.h"
+
+#define IMM2D_IMPL
+#include "immediate2d.h"
 
 #include <vector>
 #include <algorithm>

@@ -42,6 +42,14 @@
 //   Double-click your MyProject.cpp file (or whatever you named it) in the
 //   "Source Files" list in the Solution Explorer panel and start writing code!
 //
+// Getting started without a template:
+//
+//   If you don't want to start from the example file, all you need to do is
+//   add this to the top of exactly one .cpp file in your project:
+//
+//     #define IMM2D_IMPL
+//     #include "immediate2d.h"
+//
 
 
 
