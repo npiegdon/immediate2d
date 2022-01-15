@@ -438,7 +438,6 @@ extern const int PixelScale;
 #include <map>
 #include <mutex>
 #include <deque>
-#include <chrono>
 #include <string>
 #include <atomic>
 #include <memory>
@@ -501,7 +500,7 @@ static std::map<std::pair<std::string, int>, std::unique_ptr<Gdiplus::Font>> imm
 static std::mutex imm2d_musicLock;
 static std::unique_ptr<std::thread> imm2d_musicThread;
 
-struct Imm2dMusicNote { uint8_t noteId; std::chrono::milliseconds duration; };
+struct Imm2dMusicNote { uint8_t noteId; uint32_t duration; };
 static std::deque<Imm2dMusicNote> imm2d_musicQueue;
 
 static std::mutex imm2d_inputLock;
@@ -528,7 +527,7 @@ void Present()
 
 void CloseWindow() { imm2d_quitting = true; }
 char LastKey() { return imm2d_key.exchange(0); }
-void Wait(int milliseconds) { std::this_thread::sleep_for(std::chrono::milliseconds(milliseconds)); }
+void Wait(int milliseconds) { ::Sleep(milliseconds); }
 void UseDoubleBuffering(bool enabled)
 {
     std::lock_guard<std::mutex> lock(imm2d_bitmapLock);
@@ -974,7 +973,7 @@ void PlayMusic(int noteId, int ms)
     std::lock_guard<std::mutex> lock(imm2d_musicLock);
     if (!imm2d_musicRunning) return;
 
-    imm2d_musicQueue.push_back(Imm2dMusicNote{ uint8_t(uint8_t(noteId) & 0x7F), std::chrono::milliseconds(ms) });
+    imm2d_musicQueue.push_back(Imm2dMusicNote{ uint8_t(uint8_t(noteId) & 0x7F), static_cast<uint32_t>(ms) });
 
     if (!imm2d_musicThread) imm2d_musicThread = std::make_unique<std::thread>([]()
         {
@@ -994,7 +993,7 @@ void PlayMusic(int noteId, int ms)
                     if (imm2d_musicQueue.empty())
                     {
                         lock.unlock();
-                        std::this_thread::sleep_for(std::chrono::milliseconds{ 1 });
+                        ::Sleep(1);
                         continue;
                     }
 
@@ -1003,7 +1002,7 @@ void PlayMusic(int noteId, int ms)
                 }
 
                 if (n.noteId != 0) midiOutShortMsg(synth, 0x00700090 | (n.noteId << 8));
-                std::this_thread::sleep_for(n.duration);
+                ::Sleep(n.duration);
                 if (n.noteId != 0) midiOutShortMsg(synth, 0x00000090 | (n.noteId << 8));
             }
 
@@ -1129,7 +1128,7 @@ int WINAPI WinMain(_In_ HINSTANCE instance, _In_opt_ HINSTANCE, _In_ LPSTR, _In_
 
     std::thread(run).detach();
 
-    auto lastDraw = std::chrono::high_resolution_clock::now();
+    auto lastDraw = GetTickCount64();
 
     MSG message;
     while (true)
@@ -1143,8 +1142,8 @@ int WINAPI WinMain(_In_ HINSTANCE instance, _In_opt_ HINSTANCE, _In_ LPSTR, _In_
 
         if (imm2d_quitting.exchange(false)) PostQuitMessage(0);
 
-        const auto now = std::chrono::high_resolution_clock::now();
-        if (now - lastDraw > std::chrono::milliseconds{ 5 })
+        const auto now = GetTickCount64();
+        if (now - lastDraw > 5)
         {
             std::lock_guard<std::mutex> lock(imm2d_bitmapLock);
             if (imm2d_dirty) InvalidateRect(wnd, nullptr, FALSE);
@@ -1152,7 +1151,7 @@ int WINAPI WinMain(_In_ HINSTANCE instance, _In_opt_ HINSTANCE, _In_ LPSTR, _In_
 
             lastDraw = now;
         }
-        else std::this_thread::sleep_for(std::chrono::milliseconds{ 1 });
+        else ::Sleep(1);
     }
 
     {
