@@ -230,10 +230,10 @@ void InitLevel(int level)
 void EraseSnakes()
 {
     // Erase using a neat segmented effect
-    for (int i = 0; i < 8; ++i)
+    for (size_t i = 0; i < 8; ++i)
     {
         for (Snake &s : snakes)
-            for (int j = i; j < s.body.size(); j += 8)
+            for (size_t j = i; j < s.body.size(); j += 8)
                 SetBigPixel(s.body[j].x, s.body[j].y, Background);
 
         Wait(35);

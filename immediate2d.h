@@ -442,10 +442,8 @@ extern const int PixelScale;
 #include <atomic>
 #include <memory>
 #include <random>
-#include <thread>
 #include <numeric>
 #include <algorithm>
-#include <functional>
 
 #ifndef IMM2D_WIDTH
 #define IMM2D_WIDTH 160
@@ -498,7 +496,7 @@ static std::unique_ptr<Gdiplus::Graphics> imm2d_graphics, imm2d_graphicsOther;
 static std::map<std::pair<std::string, int>, std::unique_ptr<Gdiplus::Font>> imm2d_fonts;
 
 static std::mutex imm2d_musicLock;
-static std::unique_ptr<std::thread> imm2d_musicThread;
+static HANDLE imm2d_musicThread{};
 
 struct Imm2dMusicNote { uint8_t noteId; uint32_t duration; };
 static std::deque<Imm2dMusicNote> imm2d_musicQueue;
@@ -681,10 +679,6 @@ void SaveImage(unsigned int suffix)
 //    Present(screen);
 //
 void Present(const std::vector<Color> &screen);
-
-// Lets you draw using the raw GDI+ Graphics object if that's something you're interested in
-void Draw(std::function<void(Gdiplus::Graphics &g)> f);
-
 
 Color MakeColor(int r, int g, int b, int a)
 {
@@ -888,18 +882,6 @@ void DrawArc(int x, int y, float radius, float thickness, Color c, float startRa
     imm2d_SetDirty();
 }
 
-void Draw(std::function<void(Gdiplus::Graphics &g)> f)
-{
-    if (!f) return;
-
-    std::lock_guard<std::mutex> lock(imm2d_bitmapLock);
-    if (!imm2d_graphics) return;
-
-    f(*imm2d_graphics.get());
-
-    imm2d_SetDirty();
-}
-
 void DrawRectangle(int x, int y, int width, int height, Color fill, Color stroke)
 {
     std::lock_guard<std::mutex> lock(imm2d_bitmapLock);
@@ -966,6 +948,41 @@ void Clear(Color c)
     imm2d_SetDirty();
 }
 
+static DWORD WINAPI imm2d_musicThreadProc(LPVOID)
+{
+    HMIDIOUT synth = nullptr;
+    if (midiOutOpen(&synth, MIDI_MAPPER, 0, 0, CALLBACK_NULL) != MMSYSERR_NOERROR) return 0;
+
+    // We always use the "Lead 1 (Square)" instrument because it sounds like the PC speaker
+    constexpr uint8_t Instrument = 80;
+    midiOutShortMsg(synth, 0xC0 | (Instrument << 8));
+
+    while (imm2d_musicRunning)
+    {
+        Imm2dMusicNote n;
+
+        {
+            std::unique_lock<std::mutex> lock(imm2d_musicLock);
+            if (imm2d_musicQueue.empty())
+            {
+                lock.unlock();
+                ::Sleep(1);
+                continue;
+            }
+
+            n = imm2d_musicQueue.front();
+            imm2d_musicQueue.pop_front();
+        }
+
+        if (n.noteId != 0) midiOutShortMsg(synth, 0x00700090 | (n.noteId << 8));
+        ::Sleep(n.duration);
+        if (n.noteId != 0) midiOutShortMsg(synth, 0x00000090 | (n.noteId << 8));
+    }
+
+    midiOutClose(synth);
+    return 0;
+}
+
 void PlayMusic(int noteId, int ms)
 {
     if (noteId < 0 || ms < 0) return;
@@ -974,40 +991,7 @@ void PlayMusic(int noteId, int ms)
     if (!imm2d_musicRunning) return;
 
     imm2d_musicQueue.push_back(Imm2dMusicNote{ uint8_t(uint8_t(noteId) & 0x7F), static_cast<uint32_t>(ms) });
-
-    if (!imm2d_musicThread) imm2d_musicThread = std::make_unique<std::thread>([]()
-        {
-            HMIDIOUT synth = nullptr;
-            if (midiOutOpen(&synth, MIDI_MAPPER, 0, 0, CALLBACK_NULL) != MMSYSERR_NOERROR) return;
-
-            // We always use the "Lead 1 (Square)" instrument because it sounds like the PC speaker
-            constexpr uint8_t Instrument = 80;
-            midiOutShortMsg(synth, 0xC0 | (Instrument << 8));
-
-            while (imm2d_musicRunning)
-            {
-                Imm2dMusicNote n;
-
-                {
-                    std::unique_lock<std::mutex> lock(imm2d_musicLock);
-                    if (imm2d_musicQueue.empty())
-                    {
-                        lock.unlock();
-                        ::Sleep(1);
-                        continue;
-                    }
-
-                    n = imm2d_musicQueue.front();
-                    imm2d_musicQueue.pop_front();
-                }
-
-                if (n.noteId != 0) midiOutShortMsg(synth, 0x00700090 | (n.noteId << 8));
-                ::Sleep(n.duration);
-                if (n.noteId != 0) midiOutShortMsg(synth, 0x00000090 | (n.noteId << 8));
-            }
-
-            midiOutClose(synth);
-        });
+    if (!imm2d_musicThread) imm2d_musicThread = CreateThread(nullptr, 0, imm2d_musicThreadProc, nullptr, 0, nullptr);
 }
 
 void ResetMusic()
@@ -1095,6 +1079,8 @@ static LRESULT CALLBACK imm2d_WndProc(HWND wnd, UINT msg, WPARAM w, LPARAM l)
     return DefWindowProc(wnd, msg, w, l);
 }
 
+static DWORD WINAPI imm2d_threadProc(LPVOID lpParam) { run(); return 0; }
+
 int WINAPI WinMain(_In_ HINSTANCE instance, _In_opt_ HINSTANCE, _In_ LPSTR, _In_ int cmdShow)
 {
     if (Width <= 0) { MessageBox(0, TEXT("IMM2D_WIDTH must be greater than 0."), TEXT("Bad Width"), MB_ICONERROR); return 1; }
@@ -1126,7 +1112,7 @@ int WINAPI WinMain(_In_ HINSTANCE instance, _In_opt_ HINSTANCE, _In_ LPSTR, _In_
     ShowWindow(wnd, cmdShow);
     UpdateWindow(wnd);
 
-    std::thread(run).detach();
+    CreateThread(nullptr, 0, imm2d_threadProc, nullptr, 0, nullptr);
 
     auto lastDraw = GetTickCount64();
 
@@ -1165,7 +1151,7 @@ int WINAPI WinMain(_In_ HINSTANCE instance, _In_opt_ HINSTANCE, _In_ LPSTR, _In_
 
         std::lock_guard<std::mutex> lock2(imm2d_musicLock);
         imm2d_musicRunning = false;
-        if (imm2d_musicThread) imm2d_musicThread->join();
+        if (imm2d_musicThread) WaitForSingleObject(imm2d_musicThread, INFINITE);
 
         // Without this, the main thread doesn't get killed fast enough to avoid
         // touching objects that have already been cleaned up after WinMain returns.
