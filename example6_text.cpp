@@ -1,5 +1,5 @@
 
-#define IMM2D_IMPL
+#define IMM2D_IMPLEMENTATION
 #include "immediate2d.h"
 
 #include <string>
