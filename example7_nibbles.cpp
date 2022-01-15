@@ -239,9 +239,9 @@ bool ReadInputAndDelay()
 {
     Wait(80);
 
-    // We use the (secret!) buffered input from drawing.cpp to make sure we don't miss any keypresses
-    // from either player.  LastKey() is usually fine for intermittent input around 60 fps, but this
-    // particular game relies on fast, sequential, low-latency inputs for multiple players.
+    // We use buffered input so we don't miss any keypresses from either player.
+    // LastKey() is usually fine for intermittent input around 60 fps, but this
+    // game relies on fast, sequential, low-latency inputs for multiple players.
     Direction desired[2] = { snakes[0].direction, snakes[1].direction };
     while (char k = LastBufferedKey())
     {
@@ -268,6 +268,12 @@ bool ReadInputAndDelay()
             CloseWindow();
             return false;
         }
+
+        // This technically only allows a single input per frame, but
+        // it's required for no inputs to be "lost" when trying to do
+        // a single pixel jaunt.
+        if (desired[0] != snakes[0].direction
+         || desired[1] != snakes[1].direction) break;
     }
 
     snakes[0].direction = desired[0];
