@@ -1,3 +1,4 @@
+#pragma once
 
 ///////////////////////////////////////////////////////////////////////////////
 //
@@ -45,22 +46,39 @@
 // Getting started without a template:
 //
 //   If you don't want to start from the example file, all you need to do is
-//   add this to the top of exactly one .cpp file in your project:
+//   add these two lines to the top of exactly one .cpp file in your project:
 //
-//     #define IMM2D_IMPL
-//     #include "immediate2d.h"
+//   #define IMM2D_IMPL
+//   #include "immediate2d.h"
+//
+//   void run()
+//   {
+//       DrawPixel(10, 10, White);
+//   }
 //
 
 
-
-// Tinker with these to change the size of the window.
+// By default, Immediate2D's virtual window is 160 pixels wide and 120 pixels
+// tall, where each virtual pixel is scaled by 5x before being drawn.
 //
-// (All of the examples assume a Width of 160 and Height of 120.)
+// You can check these values at runtime by using the Width, Height, and
+// PixelScale global variables.
 //
-static constexpr int Width = 160;
-static constexpr int Height = 120;
-static constexpr int PixelScale = 5;
-
+// To change any of those, use additional #define lines, in the same file
+// where you plan to #define IMM2D_IMPL, like this example:
+//
+// #define IMM2D_WIDTH 640
+// #define IMM2D_HEIGHT 480
+// #define IMM2D_SCALE 2
+//
+// #define IMM2D_IMPL
+// #include "immediate2d.h"
+//
+// That would give you a window that was 640x480 where each virtual pixel is
+// scaled 2x before being drawn to the screen.  All three can be set
+// independently.  For example, you'd only need one line if you only wanted
+// to change the scale.
+//
 
 
 
@@ -405,6 +423,9 @@ void ResetMusic();
 
 
 
+extern const int Width;
+extern const int Height;
+extern const int PixelScale;
 
 
 
@@ -428,6 +449,22 @@ void ResetMusic();
 #include <algorithm>
 #include <functional>
 
+#ifndef IMM2D_WIDTH
+#define IMM2D_WIDTH 160
+#endif
+
+#ifndef IMM2D_HEIGHT
+#define IMM2D_HEIGHT 120
+#endif
+
+#ifndef IMM2D_SCALE
+#define IMM2D_SCALE 5
+#endif
+
+const int Width = IMM2D_WIDTH;
+const int Height = IMM2D_HEIGHT;
+const int PixelScale = IMM2D_SCALE;
+
 // The standard library's min/max algorithms conflict with Microsoft's
 // min/max macros, but if you define NOMINMAX, the Windows header omits them.
 #define NOMINMAX
@@ -437,7 +474,6 @@ void ResetMusic();
 // GDI+ uses the min/max macros, so we have to work around disabling them.
 namespace Gdiplus { using std::min; using std::max; }
 #include <GdiPlus.h>
-#include <windowsx.h>
 
 // This instructs Visual Studio to add these to the list of libraries we link against
 #pragma comment(lib, "gdi32.lib")
@@ -447,41 +483,34 @@ namespace Gdiplus { using std::min; using std::max; }
 #pragma comment(lib, "Ole32.lib")
 #pragma comment(lib, "Shell32.lib")
 
-using namespace std;
-using namespace std::chrono;
-
-static_assert(Width > 0, "Width must be greater than 0.");
-static_assert(Height > 0, "Height must be greater than 0.");
-static_assert(PixelScale > 0, "PixelScale must be greater than 0.");
-
 static bool dirty{ true };
 static bool doubleBuffered{ false };
 
-static atomic<char> key{ 0 };
-static atomic<bool> quitting{ false };
-static atomic<bool> musicRunning{ true };
-static atomic<bool> mouseDown[3]{ false, false, false };
-static atomic<int> mouseX{ -1 }, mouseY{ -1 };
+static std::atomic<char> key{ 0 };
+static std::atomic<bool> quitting{ false };
+static std::atomic<bool> musicRunning{ true };
+static std::atomic<bool> mouseDown[3]{ false, false, false };
+static std::atomic<int> mouseX{ -1 }, mouseY{ -1 };
 
-static mutex bitmapLock;
-static unique_ptr<Gdiplus::Bitmap> bitmap, bitmapOther;
-static unique_ptr<Gdiplus::Graphics> graphics, graphicsOther;
-static map<pair<string, int>, unique_ptr<Gdiplus::Font>> fonts;
+static std::mutex bitmapLock;
+static std::unique_ptr<Gdiplus::Bitmap> bitmap, bitmapOther;
+static std::unique_ptr<Gdiplus::Graphics> graphics, graphicsOther;
+static std::map<std::pair<std::string, int>, std::unique_ptr<Gdiplus::Font>> fonts;
 
-static mutex musicLock;
-static unique_ptr<thread> musicThread;
+static std::mutex musicLock;
+static std::unique_ptr<std::thread> musicThread;
 
-struct MusicNote { uint8_t noteId; milliseconds duration; };
-static deque<MusicNote> musicQueue;
+struct MusicNote { uint8_t noteId; std::chrono::milliseconds duration; };
+static std::deque<MusicNote> musicQueue;
 
-static mutex inputLock;
-static deque<char> inputBuffer;
+static std::mutex inputLock;
+static std::deque<char> inputBuffer;
 
 extern void run();
 
 void Present()
 {
-    lock_guard<mutex> lock(bitmapLock);
+    std::lock_guard<std::mutex> lock(bitmapLock);
 
     if (doubleBuffered)
     {
@@ -500,10 +529,10 @@ void Present()
 
 void CloseWindow() { quitting = true; }
 char LastKey() { return key.exchange(0); }
-void Wait(int milliseconds) { this_thread::sleep_for(std::chrono::milliseconds(milliseconds)); }
+void Wait(int milliseconds) { std::this_thread::sleep_for(std::chrono::milliseconds(milliseconds)); }
 void UseDoubleBuffering(bool enabled)
 {
-    lock_guard<mutex> lock(bitmapLock);
+    std::lock_guard<std::mutex> lock(bitmapLock);
     doubleBuffered = enabled;
     dirty = true;
 }
@@ -520,18 +549,18 @@ static void SetDirty()
     if (!doubleBuffered) dirty = true;
 }
 
-static const wstring ToWide(const std::string &utf8)
+static const std::wstring ToWide(const std::string &utf8)
 {
     const int wlen = ::MultiByteToWideChar(CP_UTF8, 0, utf8.c_str(), -1, nullptr, 0);
-    auto buffer = make_unique<wchar_t[]>(wlen);
+    auto buffer = std::make_unique<wchar_t[]>(wlen);
 
     const int success = ::MultiByteToWideChar(CP_UTF8, 0, utf8.c_str(), -1, buffer.get(), wlen);
-    return success ? wstring(buffer.get()) : wstring();
+    return success ? std::wstring(buffer.get()) : std::wstring();
 }
 
 char LastBufferedKey()
 {
-    lock_guard<mutex> lock(inputLock);
+    std::lock_guard<std::mutex> lock(inputLock);
     if (inputBuffer.empty()) return 0;
 
     char k = inputBuffer.front();
@@ -541,13 +570,13 @@ char LastBufferedKey()
 
 void ClearInputBuffer()
 {
-    lock_guard<mutex> lock(inputLock);
+    std::lock_guard<std::mutex> lock(inputLock);
     inputBuffer.clear();
 }
 
 static void AddBufferedKey(char c)
 {
-    lock_guard<mutex> lock(inputLock);
+    std::lock_guard<std::mutex> lock(inputLock);
 
     // If we're not using this feature, keep list a reasonable size
     inputBuffer.push_back(c);
@@ -559,7 +588,7 @@ static void AddBufferedKey(char c)
 // For random coordinates/colors in a tight loop, this outperforms std::mt19937 by a mile
 //
 uint64_t xoroshiro128plus(void) {
-    static uint64_t s[2] = { 1, random_device()() };
+    static uint64_t s[2] = { 1, std::random_device()() };
     auto rotl = [](const uint64_t x, int k) { return (x << k) | (x >> (64 - k)); };
 
     const uint64_t s0 = s[0];
@@ -585,7 +614,7 @@ double RandomDouble()
 }
 
 // GDI+ makes us work a little harder before we can save as a particular image type
-static CLSID GetEncoderClsid(const wstring &format)
+static CLSID GetEncoderClsid(const std::wstring &format)
 {
     using namespace Gdiplus;
 
@@ -593,7 +622,7 @@ static CLSID GetEncoderClsid(const wstring &format)
     GetImageEncodersSize(&count, &bytes);
 
     // Something weird is going on here.  The returned size isn't just count*sizeof(ImageCodecInfo).
-    auto codecs = make_unique<uint8_t[]>(bytes);
+    auto codecs = std::make_unique<uint8_t[]>(bytes);
     if (!codecs) return CLSID{};
 
     GetImageEncoders(count, bytes, reinterpret_cast<ImageCodecInfo *>(codecs.get()));
@@ -610,10 +639,10 @@ static CLSID GetEncoderClsid(const wstring &format)
 
 void SaveImage(unsigned int suffix)
 {
-    lock_guard<mutex> lock(bitmapLock);
+    std::lock_guard<std::mutex> lock(bitmapLock);
     if (!graphics) return;
 
-    static wstring desktop;
+    static std::wstring desktop;
     if (desktop.empty())
     {
         wchar_t *desktopRaw = nullptr;
@@ -622,8 +651,8 @@ void SaveImage(unsigned int suffix)
         CoTaskMemFree(desktopRaw);
     }
 
-    wstring path = desktop + wstring(L"\\image");
-    if (suffix > 0) path += L"_" + to_wstring(suffix);
+    std::wstring path = desktop + std::wstring(L"\\image");
+    if (suffix > 0) path += L"_" + std::to_wstring(suffix);
     path += L".png";
 
     static const CLSID png = GetEncoderClsid(L"image/png");
@@ -671,9 +700,9 @@ constexpr Color MakeColor(int r, int g, int b)
 
 Color MakeColorHSB(int hue, int sat, int val)
 {
-    float h = min(1.0f, max(0.0f, (hue % 360) / 360.0f));
-    float s = min(1.0f, max(0.0f, sat / 255.0f));
-    float v = min(1.0f, max(0.0f, val / 255.0f));
+    float h = std::min(1.0f, std::max(0.0f, (hue % 360) / 360.0f));
+    float s = std::min(1.0f, std::max(0.0f, sat / 255.0f));
+    float v = std::min(1.0f, std::max(0.0f, val / 255.0f));
 
     if (s == 0)
     {
@@ -706,7 +735,7 @@ Color MakeColorHSB(int hue, int sat, int val)
 
 void imm2d_setAntiAliasing(bool enabled)
 {
-    lock_guard<mutex> lock(bitmapLock);
+    std::lock_guard<std::mutex> lock(bitmapLock);
     if (!graphics) return;
 
     graphics->SetSmoothingMode(enabled ? Gdiplus::SmoothingModeAntiAlias : Gdiplus::SmoothingModeNone);
@@ -721,7 +750,7 @@ void DrawPixel(int x, int y, Color c)
 {
     if (x < 0 || x >= Width || y < 0 || y >= Height) return;
 
-    lock_guard<mutex> lock(bitmapLock);
+    std::lock_guard<std::mutex> lock(bitmapLock);
     if (!graphics) return;
 
     Gdiplus::BitmapData d;
@@ -738,7 +767,7 @@ void Present(const std::vector<Color> &screen)
 {
     if (screen.size() != Width * Height) return;
 
-    lock_guard<mutex> lock(bitmapLock);
+    std::lock_guard<std::mutex> lock(bitmapLock);
     if (!graphics) return;
 
     Gdiplus::BitmapData d;
@@ -763,7 +792,7 @@ Color ReadPixel(int x, int y)
 {
     if (x < 0 || x >= Width || y < 0 || y >= Height) return Black;
 
-    lock_guard<mutex> lock(bitmapLock);
+    std::lock_guard<std::mutex> lock(bitmapLock);
     if (!graphics) return Black;
 
     Gdiplus::Color c;
@@ -773,7 +802,7 @@ Color ReadPixel(int x, int y)
 
 void DrawLine(int x1, int y1, int x2, int y2, int thickness, Color c)
 {
-    lock_guard<mutex> lock(bitmapLock);
+    std::lock_guard<std::mutex> lock(bitmapLock);
     if (!graphics) return;
 
     Gdiplus::Color color(c);
@@ -788,7 +817,7 @@ void DrawLine(int x1, int y1, int x2, int y2, int thickness, Color c)
 
 void DrawLine(float x1, float y1, float x2, float y2, int thickness, Color c)
 {
-    lock_guard<mutex> lock(bitmapLock);
+    std::lock_guard<std::mutex> lock(bitmapLock);
     if (!graphics) return;
 
     Gdiplus::Color color(c);
@@ -803,7 +832,7 @@ void DrawLine(float x1, float y1, float x2, float y2, int thickness, Color c)
 
 void DrawCircle(int x, int y, int radius, Color fill, Color stroke)
 {
-    lock_guard<mutex> lock(bitmapLock);
+    std::lock_guard<std::mutex> lock(bitmapLock);
     if (!graphics) return;
 
     Gdiplus::Rect r(x - radius, y - radius, radius * 2, radius * 2);
@@ -825,7 +854,7 @@ void DrawCircle(int x, int y, int radius, Color fill, Color stroke)
 
 void DrawCircle(float x, float y, float radius, Color fill, Color stroke)
 {
-    lock_guard<mutex> lock(bitmapLock);
+    std::lock_guard<std::mutex> lock(bitmapLock);
     if (!graphics) return;
 
     Gdiplus::RectF r(x - radius, y - radius, radius * 2, radius * 2);
@@ -847,7 +876,7 @@ void DrawCircle(float x, float y, float radius, Color fill, Color stroke)
 
 void DrawArc(int x, int y, float radius, float thickness, Color c, float startRadians, float endRadians)
 {
-    lock_guard<mutex> lock(bitmapLock);
+    std::lock_guard<std::mutex> lock(bitmapLock);
     if (!graphics) return;
 
     Gdiplus::Color color(c);
@@ -865,7 +894,7 @@ void Draw(std::function<void(Gdiplus::Graphics &g)> f)
 {
     if (!f) return;
 
-    lock_guard<mutex> lock(bitmapLock);
+    std::lock_guard<std::mutex> lock(bitmapLock);
     if (!graphics) return;
 
     f(*graphics.get());
@@ -875,7 +904,7 @@ void Draw(std::function<void(Gdiplus::Graphics &g)> f)
 
 void DrawRectangle(int x, int y, int width, int height, Color fill, Color stroke)
 {
-    lock_guard<mutex> lock(bitmapLock);
+    std::lock_guard<std::mutex> lock(bitmapLock);
     if (!graphics) return;
 
     // GDI+'s DrawRectangle and FillRectangle behave a little differently: One
@@ -904,16 +933,16 @@ void DrawString(int x, int y, const char *text, const char *fontName, int fontPt
     if (!text || !fontName) return;
     if (fontPtSize < 1 || !text[0]) return;
 
-    lock_guard<mutex> lock(bitmapLock);
+    std::lock_guard<std::mutex> lock(bitmapLock);
     if (!graphics) return;
 
-    static auto getFont = [](string name, int size) {
-        const pair<string, int> key{ name, size };
+    static auto getFont = [](std::string name, int size) {
+        const std::pair<std::string, int> key{ name, size };
 
         const auto found = fonts.find(key);
         if (found != fonts.end()) return &found->second;
 
-        fonts[key] = make_unique<Gdiplus::Font>(ToWide(name).c_str(), static_cast<Gdiplus::REAL>(size));
+        fonts[key] = std::make_unique<Gdiplus::Font>(ToWide(name).c_str(), static_cast<Gdiplus::REAL>(size));
         return &fonts[key];
     };
 
@@ -932,7 +961,7 @@ void DrawString(int x, int y, const char *text, const char *fontName, int fontPt
 
 void Clear(Color c)
 {
-    lock_guard<mutex> lock(bitmapLock);
+    std::lock_guard<std::mutex> lock(bitmapLock);
     if (!graphics) return;
 
     graphics->Clear(Gdiplus::Color(c));
@@ -943,12 +972,12 @@ void PlayMusic(int noteId, int ms)
 {
     if (noteId < 0 || ms < 0) return;
 
-    lock_guard<mutex> lock(musicLock);
+    std::lock_guard<std::mutex> lock(musicLock);
     if (!musicRunning) return;
 
-    musicQueue.push_back(MusicNote{ uint8_t(uint8_t(noteId) & 0x7F), milliseconds(ms) });
+    musicQueue.push_back(MusicNote{ uint8_t(uint8_t(noteId) & 0x7F), std::chrono::milliseconds(ms) });
 
-    if (!musicThread) musicThread = make_unique<thread>([]()
+    if (!musicThread) musicThread = std::make_unique<std::thread>([]()
         {
             HMIDIOUT synth = nullptr;
             if (midiOutOpen(&synth, MIDI_MAPPER, 0, 0, CALLBACK_NULL) != MMSYSERR_NOERROR) return;
@@ -962,11 +991,11 @@ void PlayMusic(int noteId, int ms)
                 MusicNote n;
 
                 {
-                    unique_lock<mutex> lock(musicLock);
+                    std::unique_lock<std::mutex> lock(musicLock);
                     if (musicQueue.empty())
                     {
                         lock.unlock();
-                        this_thread::sleep_for(1ms);
+                        std::this_thread::sleep_for(std::chrono::milliseconds{ 1 });
                         continue;
                     }
 
@@ -975,7 +1004,7 @@ void PlayMusic(int noteId, int ms)
                 }
 
                 if (n.noteId != 0) midiOutShortMsg(synth, 0x00700090 | (n.noteId << 8));
-                this_thread::sleep_for(n.duration);
+                std::this_thread::sleep_for(n.duration);
                 if (n.noteId != 0) midiOutShortMsg(synth, 0x00000090 | (n.noteId << 8));
             }
 
@@ -985,7 +1014,7 @@ void PlayMusic(int noteId, int ms)
 
 void ResetMusic()
 {
-    lock_guard<mutex> lock(musicLock);
+    std::lock_guard<std::mutex> lock(musicLock);
     musicQueue.clear();
 }
 
@@ -1018,7 +1047,7 @@ LRESULT CALLBACK WndProc(HWND wnd, UINT msg, WPARAM w, LPARAM l)
         HANDLE old = SelectObject(bitmapDC, hbitmap);
 
         {
-            lock_guard<mutex> lock(bitmapLock);
+            std::lock_guard<std::mutex> lock(bitmapLock);
             Gdiplus::Graphics hdcG(bitmapDC);
 
             hdcG.SetInterpolationMode(Gdiplus::InterpolationModeNearestNeighbor);
@@ -1070,6 +1099,10 @@ LRESULT CALLBACK WndProc(HWND wnd, UINT msg, WPARAM w, LPARAM l)
 
 int WINAPI WinMain(_In_ HINSTANCE instance, _In_opt_ HINSTANCE, _In_ LPSTR, _In_ int cmdShow)
 {
+    if (Width <= 0) { MessageBox(0, L"IMM2D_WIDTH must be greater than 0.", L"Bad Width", MB_ICONERROR); return 1; }
+    if (Height <= 0) { MessageBox(0, L"IMM2D_HEIGHT must be greater than 0.", L"Bad Width", MB_ICONERROR); return 1; }
+    if (PixelScale <= 0) { MessageBox(0, L"IMM2D_SCALE must be greater than 0.", L"Bad Width", MB_ICONERROR); return 1; }
+
     WNDCLASSW wc{ CS_OWNDC, WndProc, 0, 0, instance, LoadIcon(nullptr, IDI_APPLICATION), LoadCursor(nullptr, IDC_ARROW), (HBRUSH)(COLOR_WINDOW + 1), nullptr, L"Immediate2D" };
     if (!RegisterClassW(&wc)) return 1;
 
@@ -1085,19 +1118,19 @@ int WINAPI WinMain(_In_ HINSTANCE instance, _In_opt_ HINSTANCE, _In_ LPSTR, _In_
     Gdiplus::GdiplusStartupInput gdiplusStartupInput;
     Gdiplus::Status startupResult = GdiplusStartup(&gdiPlusToken, &gdiplusStartupInput, NULL);
 
-    bitmap = make_unique<Gdiplus::Bitmap>(Width, Height);
-    bitmapOther = make_unique<Gdiplus::Bitmap>(Width, Height);
-    graphics = make_unique<Gdiplus::Graphics>(bitmap.get());
-    graphicsOther = make_unique<Gdiplus::Graphics>(bitmapOther.get());
+    bitmap = std::make_unique<Gdiplus::Bitmap>(Width, Height);
+    bitmapOther = std::make_unique<Gdiplus::Bitmap>(Width, Height);
+    graphics = std::make_unique<Gdiplus::Graphics>(bitmap.get());
+    graphicsOther = std::make_unique<Gdiplus::Graphics>(bitmapOther.get());
     StopAntiAliasing();
     Clear();
 
     ShowWindow(wnd, cmdShow);
     UpdateWindow(wnd);
 
-    thread(run).detach();
+    std::thread(run).detach();
 
-    auto lastDraw = high_resolution_clock::now();
+    auto lastDraw = std::chrono::high_resolution_clock::now();
 
     MSG message;
     while (true)
@@ -1111,20 +1144,20 @@ int WINAPI WinMain(_In_ HINSTANCE instance, _In_opt_ HINSTANCE, _In_ LPSTR, _In_
 
         if (quitting.exchange(false)) PostQuitMessage(0);
 
-        const auto now = high_resolution_clock::now();
-        if (now - lastDraw > 5ms)
+        const auto now = std::chrono::high_resolution_clock::now();
+        if (now - lastDraw > std::chrono::milliseconds{ 5 })
         {
-            lock_guard<mutex> lock(bitmapLock);
+            std::lock_guard<std::mutex> lock(bitmapLock);
             if (dirty) InvalidateRect(wnd, nullptr, FALSE);
             dirty = false;
 
             lastDraw = now;
         }
-        else this_thread::sleep_for(1ms);
+        else std::this_thread::sleep_for(std::chrono::milliseconds{ 1 });
     }
 
     {
-        lock_guard<mutex> lock(bitmapLock);
+        std::lock_guard<std::mutex> lock(bitmapLock);
         fonts.clear();
         graphicsOther.reset();
         graphics.reset();
@@ -1132,7 +1165,7 @@ int WINAPI WinMain(_In_ HINSTANCE instance, _In_opt_ HINSTANCE, _In_ LPSTR, _In_
         bitmap.reset();
         Gdiplus::GdiplusShutdown(gdiPlusToken);
 
-        lock_guard<mutex> lock2(musicLock);
+        std::lock_guard<std::mutex> lock2(musicLock);
         musicRunning = false;
         if (musicThread) musicThread->join();
 
