@@ -2,7 +2,7 @@
 
 ///////////////////////////////////////////////////////////////////////////////
 //
-// Immediate2D - Created by Nicholas Piegdon, released in the public domain
+// Immediate2D - Created by Nicholas Piegdon
 // https://github.com/npiegdon/immediate2d
 //
 // A drawing framework for Windows that makes simple graphics programming as
@@ -33,7 +33,7 @@
 //   6. Click OK.
 //
 //   7. Copy the following files from Immediate2D into your project's folder:
-//      - drawing.h
+//      - immediate2d.h
 //      - example1_helloWorld.cpp
 //
 //   8. Rename your example1_helloWorld.cpp to something like MyProject.cpp
@@ -145,10 +145,10 @@ Color MakeColorHSB(int hue, int saturation, int brightness);
 static constexpr double Tau = 6.283185307179586476925286766559;
 
 // To find out how many radians there are in 45 degrees, call Radians(45).
-static constexpr double Radians(double degrees) { return Tau / 360.0; }
+static constexpr double Radians(double degrees) { return degrees * Tau / 360.0; }
 
 // To find out how many degrees there are in half a circle, call Degrees(Tau / 2).
-static constexpr double Degrees(double radians) { return 360.0 / Tau; }
+static constexpr double Degrees(double radians) { return radians * 360.0 / Tau; }
 
 
 
@@ -427,6 +427,14 @@ void ResetMusic();
 
 
 
+
+
+
+
+
+
+
+
 extern const int Width;
 extern const int Height;
 extern const int PixelScale;
@@ -464,8 +472,15 @@ const int PixelScale = IMM2D_SCALE;
 // The standard library's min/max algorithms conflict with Microsoft's
 // min/max macros, but if you define NOMINMAX, the Windows header omits them.
 #define NOMINMAX
+
+// This trims the Windows.h header down to improve compile times
+#define WIN32_LEAN_AND_MEAN
+
 #include <Windows.h>
 #include <Shlobj.h>
+
+// This is all we need that is removed by WIN32_LEAN_AND_MEAN
+#include <mmeapi.h>
 
 // GDI+ uses the min/max macros, so we have to work around disabling them.
 namespace Gdiplus { using std::min; using std::max; }
@@ -479,7 +494,14 @@ namespace Gdiplus { using std::min; using std::max; }
 #pragma comment(lib, "gdiplus.lib")
 #pragma comment(lib, "Shell32.lib")
 
+// The primary user-supplied function that we call on its own thread
 extern void run();
+
+
+
+//
+// Immediate2D internal state
+//
 
 static bool imm2d_dirty{ true };
 static bool imm2d_doubleBuffered{ false };
@@ -545,12 +567,12 @@ static void imm2d_SetDirty()
     if (!imm2d_doubleBuffered) imm2d_dirty = true;
 }
 
-static const std::wstring imm2d_ToWide(const std::string &utf8)
+static const std::wstring imm2d_ToWide(const char *utf8)
 {
-    const int wlen = ::MultiByteToWideChar(CP_UTF8, 0, utf8.c_str(), -1, nullptr, 0);
+    const int wlen = ::MultiByteToWideChar(CP_UTF8, 0, utf8, -1, nullptr, 0);
     auto buffer = std::make_unique<wchar_t[]>(wlen);
 
-    const int success = ::MultiByteToWideChar(CP_UTF8, 0, utf8.c_str(), -1, buffer.get(), wlen);
+    const int success = ::MultiByteToWideChar(CP_UTF8, 0, utf8, -1, buffer.get(), wlen);
     return success ? std::wstring(buffer.get()) : std::wstring();
 }
 
@@ -612,20 +634,18 @@ double RandomDouble()
 // GDI+ makes us work a little harder before we can save as a particular image type
 static CLSID imm2d_GetEncoderClsid(const std::wstring &format)
 {
-    using namespace Gdiplus;
-
-    UINT count, bytes;
-    GetImageEncodersSize(&count, &bytes);
+    UINT count{}, bytes{};
+    Gdiplus::GetImageEncodersSize(&count, &bytes);
 
     // Something weird is going on here.  The returned size isn't just count*sizeof(ImageCodecInfo).
     auto codecs = std::make_unique<uint8_t[]>(bytes);
     if (!codecs) return CLSID{};
 
-    GetImageEncoders(count, bytes, reinterpret_cast<ImageCodecInfo *>(codecs.get()));
+    Gdiplus::GetImageEncoders(count, bytes, reinterpret_cast<Gdiplus::ImageCodecInfo *>(codecs.get()));
 
     for (UINT i = 0; i < count; ++i)
     {
-        const auto &codec = reinterpret_cast<ImageCodecInfo *>(codecs.get())[i];
+        const auto &codec = reinterpret_cast<Gdiplus::ImageCodecInfo *>(codecs.get())[i];
         if (wcscmp(codec.MimeType, format.c_str()) != 0) continue;
         return codec.Clsid;
     }
@@ -922,7 +942,7 @@ void DrawString(int x, int y, const char *text, const char *fontName, int fontPt
         const auto found = imm2d_fonts.find(key);
         if (found != imm2d_fonts.end()) return &found->second;
 
-        imm2d_fonts[key] = std::make_unique<Gdiplus::Font>(imm2d_ToWide(name).c_str(), static_cast<Gdiplus::REAL>(size));
+        imm2d_fonts[key] = std::make_unique<Gdiplus::Font>(imm2d_ToWide(name.c_str()).c_str(), static_cast<Gdiplus::REAL>(size));
         return &imm2d_fonts[key];
     };
 
