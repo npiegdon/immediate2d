@@ -205,6 +205,41 @@ void Clear(Color c = Black);
 Color ReadPixel(int x, int y);
 
 
+// This makes "Image" a synonym for "int" (a positive or negative number).
+using Image = int;
+
+const static Image InvalidImage = -1;
+
+// Attempts to load an image and returns an "Image" handle that can be used
+// with DrawImage.  Many image file extensions are supported.
+//
+// To find the image you requested, the following locations are searched,
+// in this order:
+//   - Resources embedded inside the app's .exe file.
+//   - Files in the current working directory.
+//   - Files in the .exe's directory.
+//   - In a /media or /images sub-folder under the .exe's directory.
+// 
+// If the image wasn't found or there was some other problem loading it,
+// this function will return InvalidImage.
+//
+// Try to call this only once per file you want to load.  Keep the returned Image
+// value around instead of calling this again and again.  Images remain loaded in
+// memory until your program ends, so calling this repeatedly for the same image
+// (say, inside a loop) will continue using more memory until your app crashes.
+Image LoadImage(const char *name);
+
+// Draws an image (obtained using LoadImage) with its top-left corner at the
+// provided (x, y) coordinates at 100% scale.
+//
+// Image formats with animation frames (like .gif) cycle through their animation
+// automatically as time goes on.  You just need to call DrawImage periodically
+// so no frames are missed.
+void DrawImage(Image i, int x, int y);
+
+// Retrieves the width and height of an image (obtained using LoadImage).
+int ImageWidth(Image i);
+int ImageHeight(Image i);
 
 
 // OPTIONAL!  Anti-aliasing is a graphics technique to make your lines and
@@ -511,11 +546,20 @@ static std::atomic<bool> imm2d_quitting{ false };
 static std::atomic<bool> imm2d_musicRunning{ true };
 static std::atomic<bool> imm2d_mouseDown[3]{ false, false, false };
 static std::atomic<int> imm2d_mouseX{ -1 }, imm2d_mouseY{ -1 };
+static std::atomic<ULONGLONG> imm2d_runDuration{ 0 };
 
 static std::mutex imm2d_bitmapLock;
 static std::unique_ptr<Gdiplus::Bitmap> imm2d_bitmap, imm2d_bitmapOther;
 static std::unique_ptr<Gdiplus::Graphics> imm2d_graphics, imm2d_graphicsOther;
 static std::map<std::pair<std::string, int>, std::unique_ptr<Gdiplus::Font>> imm2d_fonts;
+
+static std::mutex imm2d_mediaLock;
+static std::vector<std::unique_ptr<Gdiplus::Bitmap>> imm2d_images;
+static std::vector<std::pair<int, int>> imm2d_imageSizes;
+static std::vector<uint32_t> imm2d_imageFrameCount;
+static std::vector<size_t> imm2d_imageFrameStart;
+static std::vector<uint32_t> imm2d_imageFrameCumulativeCentiSeconds;
+static std::vector<uint32_t> imm2d_imageFrameSumMs;
 
 static std::mutex imm2d_musicLock;
 static HANDLE imm2d_musicThread{};
@@ -968,6 +1012,114 @@ void Clear(Color c)
     imm2d_SetDirty();
 }
 
+// Are we being a bad neighbor?  What's the likelihood that the user wants to use the
+// Win32 API version of LoadImage in the same compilation unit as our implementation?
+#ifdef LoadImage
+#undef LoadImage
+#endif
+
+Image LoadImage(const char *name)
+{
+    if (!name) return InvalidImage;
+
+    std::lock_guard<std::mutex> lock(imm2d_bitmapLock);
+    if (!imm2d_graphics) return InvalidImage;
+
+    // TODO: After 50 images, start storing a path-->Image map and checking it before re-loading.
+
+    // TODO: Work much harder to find the file!
+    auto *result = Gdiplus::Bitmap::FromFile(imm2d_ToWide(name).c_str());
+    if (!result) return InvalidImage;
+
+    const UINT frameCount = result->GetFrameCount(&Gdiplus::FrameDimensionTime);
+
+    std::lock_guard<std::mutex> lock2(imm2d_mediaLock);
+    imm2d_imageSizes.push_back(std::pair<int, int>(result->GetWidth(), result->GetHeight()));
+    imm2d_images.push_back(std::unique_ptr<Gdiplus::Bitmap>(result));
+
+    imm2d_imageFrameCount.push_back(frameCount);
+    imm2d_imageFrameStart.push_back(imm2d_imageFrameCumulativeCentiSeconds.size());
+    imm2d_imageFrameSumMs.push_back(0);
+
+    if (frameCount > 0)
+    {
+        // GDI+ follows the usual Win32 convention of making you request the size of
+        // the thing first, then having you provide a big enough buffer to fill it.
+        // In this case, "it" is the list of "centi"-second delay between frames.
+        const UINT bufferSize = result->GetPropertyItemSize(PropertyTagFrameDelay);
+        auto itemBuffer = std::make_unique<uint8_t[]>(bufferSize);
+
+        auto *item = reinterpret_cast<Gdiplus::PropertyItem *>(itemBuffer.get());
+        result->GetPropertyItem(PropertyTagFrameDelay, bufferSize, item);
+        const auto *frameCentiSeconds = reinterpret_cast<long*>(item->value);
+
+        // TODO: What do "infinite"-length frames at the end of a GIF look like?
+        // TODO: What does PropertyTagLoopCount look like?  Is that how we detect infinite loops?
+
+        auto &sum = imm2d_imageFrameSumMs.back();
+        for (size_t i = 0; i < frameCount; ++i)
+        {
+            const auto cSec = frameCentiSeconds[i];
+            
+            // TODO: If "infinite"-length frames are anywhere near LONG_MAX, we should check for overflows
+            sum += cSec;
+            imm2d_imageFrameCumulativeCentiSeconds.push_back(sum);
+        }
+        sum *= 10;
+    }
+
+    return static_cast<Image>(imm2d_images.size() - 1);
+}
+
+void DrawImage(Image i, int x, int y)
+{
+    if (i < 0) return;
+
+    std::lock_guard<std::mutex> lock(imm2d_bitmapLock);
+    if (!imm2d_graphics) return;
+
+    std::lock_guard<std::mutex> lock2(imm2d_mediaLock);
+    if (imm2d_images.size() <= static_cast<size_t>(i)) return;
+
+    auto *image = imm2d_images[i].get();
+    const auto count = imm2d_imageFrameCount[i];
+    if (count > 0)
+    {
+        const uint64_t now = imm2d_runDuration;
+        const auto wrapped = now % imm2d_imageFrameSumMs[i];
+
+        const auto begin = imm2d_imageFrameCumulativeCentiSeconds.cbegin() + imm2d_imageFrameStart[i];
+        auto found = std::lower_bound(begin, begin + imm2d_imageFrameCount[i], wrapped / 10);
+
+        uint32_t frameId = 0;
+        if (found != imm2d_imageFrameCumulativeCentiSeconds.end()) frameId = static_cast<uint32_t>(std::distance(begin, found));
+
+        image->SelectActiveFrame(&Gdiplus::FrameDimensionTime, frameId);
+    }
+
+    imm2d_graphics->DrawImage(image, x, y);
+    imm2d_SetDirty();
+}
+
+int ImageWidth(Image i)
+{
+    if (i < 0) return 0;
+
+    std::lock_guard<std::mutex> lock(imm2d_mediaLock);
+    if (imm2d_imageSizes.size() <= static_cast<size_t>(i)) return 0;
+    return imm2d_imageSizes[i].first;
+}
+
+int ImageHeight(Image i)
+{
+    if (i < 0) return 0;
+
+    std::lock_guard<std::mutex> lock(imm2d_mediaLock);
+    if (imm2d_imageSizes.size() <= static_cast<size_t>(i)) return 0;
+    return imm2d_imageSizes[i].second;
+}
+
+
 static DWORD WINAPI imm2d_musicThreadProc(LPVOID)
 {
     HMIDIOUT synth = nullptr;
@@ -1134,7 +1286,8 @@ int WINAPI WinMain(_In_ HINSTANCE instance, _In_opt_ HINSTANCE, _In_ LPSTR, _In_
 
     CreateThread(nullptr, 0, imm2d_threadProc, nullptr, 0, nullptr);
 
-    auto lastDraw = GetTickCount64();
+    const auto firstDraw = GetTickCount64();
+    auto lastDraw = firstDraw;
 
     MSG message;
     while (true)
@@ -1149,6 +1302,8 @@ int WINAPI WinMain(_In_ HINSTANCE instance, _In_opt_ HINSTANCE, _In_ LPSTR, _In_
         if (imm2d_quitting.exchange(false)) PostQuitMessage(0);
 
         const auto now = GetTickCount64();
+        imm2d_runDuration = now - firstDraw;
+
         if (now - lastDraw > 5)
         {
             std::lock_guard<std::mutex> lock(imm2d_bitmapLock);
@@ -1167,9 +1322,13 @@ int WINAPI WinMain(_In_ HINSTANCE instance, _In_opt_ HINSTANCE, _In_ LPSTR, _In_
         imm2d_graphics.reset();
         imm2d_bitmapOther.reset();
         imm2d_bitmap.reset();
+
+        std::lock_guard<std::mutex> lock2(imm2d_mediaLock);
+        imm2d_images.clear();
+
         Gdiplus::GdiplusShutdown(gdiPlusToken);
 
-        std::lock_guard<std::mutex> lock2(imm2d_musicLock);
+        std::lock_guard<std::mutex> lock3(imm2d_musicLock);
         imm2d_musicRunning = false;
         if (imm2d_musicThread) WaitForSingleObject(imm2d_musicThread, INFINITE);
 
