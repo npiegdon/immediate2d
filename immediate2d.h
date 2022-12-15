@@ -13,7 +13,7 @@
 // 
 // CHANGELOG
 // 2017-11, v1: Initial release
-// 2022-??, v2: API cleanup, single file, [more to come]
+// 2022-12, v2: API cleanup, single file, image loading/drawing
 //
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -223,6 +223,9 @@ const static Image InvalidImage = -1;
 // If the image wasn't found or there was some other problem loading it,
 // this function will return InvalidImage.
 //
+// This can be called with Base64-encoded image data directly (passing the data
+// instead of a file name) to avoid files or embedded resources entirely.
+// 
 // Try to call this only once per file you want to load.  Keep the returned Image
 // value around instead of calling this again and again.  Images remain loaded in
 // memory until your program ends, so calling this repeatedly for the same image
@@ -235,7 +238,7 @@ Image LoadImage(const char *name);
 // Image formats with animation frames (like .gif) cycle through their animation
 // automatically as time goes on.  You just need to call DrawImage periodically
 // so no frames are missed.
-void DrawImage(Image i, int x, int y);
+void DrawImage(int x, int y, Image i);
 
 // Retrieves the width and height of an image (obtained using LoadImage).
 int ImageWidth(Image i);
@@ -295,7 +298,15 @@ void CloseWindow();
 void SaveImage(unsigned int suffix = 0);
 
 
-// Generates a random integer in the interval [low, high)
+// Generates a random true/false value (like a coin toss).
+//
+// This is useful when you need to make a decision:
+//     if (RandomBool()) goToTheStore();
+//     else stayHome();
+//
+bool RandomBool();
+
+// Generates a random integer in the interval [low, high).
 //
 // This is useful for placing things on the screen:
 //     int x = RandomInt(0, Width);
@@ -468,7 +479,10 @@ void ResetMusic();
 
 
 
-
+//
+// Everything below this point is Immediate2D's implementation,
+// which may be more challenging for beginners to read and follow.
+//
 
 extern const int Width;
 extern const int Height;
@@ -513,6 +527,7 @@ const int PixelScale = IMM2D_SCALE;
 
 #include <Windows.h>
 #include <Shlobj.h>
+#include <Shlwapi.h>
 
 // This is all we need that is removed by WIN32_LEAN_AND_MEAN
 #include <mmeapi.h>
@@ -528,6 +543,7 @@ namespace Gdiplus { using std::min; using std::max; }
 #pragma comment(lib, "user32.lib")
 #pragma comment(lib, "gdiplus.lib")
 #pragma comment(lib, "Shell32.lib")
+#pragma comment(lib, "Shlwapi.lib")
 
 // The primary user-supplied function that we call on its own thread
 extern void run();
@@ -667,6 +683,11 @@ uint64_t imm2d_xoroshiro128plus(void) {
 int RandomInt(int low, int high)
 {
     return (imm2d_xoroshiro128plus() % (int64_t(high) - int64_t(low))) + low;
+}
+
+bool RandomBool()
+{
+    return RandomInt(0, 1) == 1;
 }
 
 double RandomDouble()
@@ -1012,6 +1033,39 @@ void Clear(Color c)
     imm2d_SetDirty();
 }
 
+Gdiplus::Bitmap *imm2d_LoadBase64Image(const char *base64)
+{
+    // Base64 decoding snippet adapted from https://stackoverflow.com/a/34571089
+
+    static const std::vector<int> T = []{
+        std::vector<int> lookup(256, -1);
+        for (int i = 0; i < 64; i++) lookup["ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/"[i]] = i;
+        return lookup;
+    }();
+
+    std::string decoded;
+    unsigned int val = 0;
+    int valb = -8;
+    while (base64)
+    {
+        const int lookup = T[*(base64++)];
+        if (lookup == -1) break;
+
+        val = (val << 6) + lookup, valb += 6;
+        if (valb >= 0) { decoded.push_back(char((val >> valb) & 0xFF)); valb -= 8; }
+    }
+
+    if (decoded.empty()) return nullptr;
+
+    IStream *stream = SHCreateMemStream((const BYTE*)decoded.data(), (UINT)decoded.size());
+    if (!stream) return nullptr;
+
+    auto *result = Gdiplus::Bitmap::FromStream(stream);
+    stream->Release();
+
+    return result;
+}
+
 // Are we being a bad neighbor?  What's the likelihood that the user wants to use the
 // Win32 API version of LoadImage in the same compilation unit as our implementation?
 #ifdef LoadImage
@@ -1021,16 +1075,26 @@ void Clear(Color c)
 Image LoadImage(const char *name)
 {
     if (!name) return InvalidImage;
+    const size_t nameLength = strnlen_s(name, MAX_PATH + 5);
 
     std::lock_guard<std::mutex> lock(imm2d_bitmapLock);
     if (!imm2d_graphics) return InvalidImage;
 
+    Gdiplus::Bitmap *result{};
+
+    // Assume a very long "file name" is actually a Base64-encoded image
+    if (nameLength > MAX_PATH) result = imm2d_LoadBase64Image(name);
+
     // TODO: After 50 images, start storing a path-->Image map and checking it before re-loading.
+    //       (This gets trickier with huge Base64-encoded inputs.  Maybe hash-->Image, instead?)
 
     // TODO: Work much harder to find the file!
-    auto *result = Gdiplus::Bitmap::FromFile(imm2d_ToWide(name).c_str());
-    if (!result) return InvalidImage;
+    if (!result) result = Gdiplus::Bitmap::FromFile(imm2d_ToWide(name).c_str());
 
+    // Try the Base64 case again, just in case it is a very small Base64-encoded image
+    if (!result) result = imm2d_LoadBase64Image(name);
+
+    if (!result) return InvalidImage;
     const UINT frameCount = result->GetFrameCount(&Gdiplus::FrameDimensionTime);
 
     std::lock_guard<std::mutex> lock2(imm2d_mediaLock);
@@ -1071,7 +1135,7 @@ Image LoadImage(const char *name)
     return static_cast<Image>(imm2d_images.size() - 1);
 }
 
-void DrawImage(Image i, int x, int y)
+void DrawImage(int x, int y, Image i)
 {
     if (i < 0) return;
 
