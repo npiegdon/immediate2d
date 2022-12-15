@@ -81,3 +81,10 @@ An implementation of Joe Stam's 2003 paper "[Real-Time Fluid Dynamics for Games]
 An adaptation of Kevin Beason's [smallpt](http://www.kevinbeason.com/smallpt/) ray tracer.
 
 <img alt="Example 9" src="images/example9.png" height="240">
+
+---
+
+### Example A - Snowy Landscape
+Demonstrates image loading while recreating [an effect](https://youtu.be/aQGgKvJPuZA) from the 1993 PC/DOS game "Jetpack Christmas Special!"
+
+<img alt="Example A" src="images/exampleA.png" height="240">
