@@ -1033,6 +1033,30 @@ void Clear(Color c)
     imm2d_SetDirty();
 }
 
+Gdiplus::Bitmap *imm2d_LoadResourceImage(const char *resourceName)
+{
+    const HRSRC id = FindResourceA(nullptr, resourceName, "IMAGES");
+    if (!id) return nullptr;
+
+    const auto size = SizeofResource(nullptr, id);
+    if (!size) return nullptr;
+
+    const auto resource = LoadResource(nullptr, id);
+    if (!resource) return nullptr;
+
+    void *bytes = LockResource(resource);
+    if (!bytes) { FreeResource(resource); return nullptr; }
+
+    IStream *stream = SHCreateMemStream(static_cast<BYTE*>(bytes), size);
+    if (!stream) { FreeResource(resource); return nullptr; }
+
+    auto *result = Gdiplus::Bitmap::FromStream(stream);
+    stream->Release();
+    FreeResource(resource);
+
+    return result;
+}
+
 Gdiplus::Bitmap *imm2d_LoadBase64Image(const char *base64)
 {
     // Base64 decoding snippet adapted from https://stackoverflow.com/a/34571089
@@ -1084,6 +1108,8 @@ Image LoadImage(const char *name)
 
     // Assume a very long "file name" is actually a Base64-encoded image
     if (nameLength > MAX_PATH) result = imm2d_LoadBase64Image(name);
+
+    if (!result) result = imm2d_LoadResourceImage(name);
 
     // TODO: After 50 images, start storing a path-->Image map and checking it before re-loading.
     //       (This gets trickier with huge Base64-encoded inputs.  Maybe hash-->Image, instead?)
