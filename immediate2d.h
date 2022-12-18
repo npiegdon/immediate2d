@@ -11,9 +11,9 @@
 // This is free and unencumbered software released into the public domain.
 // See the full notice at the end of this file.
 // 
-// CHANGELOG
-// 2017-11, v1: Initial release
+// CHANGELOG (see CHANGES.md for more detail)
 // 2022-12, v2: API cleanup, single file, image loading/drawing
+// 2017-11, v1: Initial release
 //
 ///////////////////////////////////////////////////////////////////////////////
 
