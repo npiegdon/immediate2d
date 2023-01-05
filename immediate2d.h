@@ -682,6 +682,7 @@ uint64_t imm2d_xoroshiro128plus(void) {
 
 int RandomInt(int low, int high)
 {
+    if (high <= low) return low;
     return (imm2d_xoroshiro128plus() % (int64_t(high) - int64_t(low))) + low;
 }
 
@@ -1070,10 +1071,16 @@ Gdiplus::Bitmap *imm2d_LoadBase64Image(const char *base64)
     std::string decoded;
     unsigned int val = 0;
     int valb = -8;
-    while (base64)
+    while (*base64)
     {
-        const int lookup = T[*(base64++)];
-        if (lookup == -1) break;
+        const char c = *(base64++);
+        const int lookup = T[c];
+        if (lookup == -1)
+        {
+            // Unless this was padding, invalid data means this wasn't Base64 to begin with
+            if (c != '=') decoded.clear();
+            break;
+        }
 
         val = (val << 6) + lookup, valb += 6;
         if (valb >= 0) { decoded.push_back(char((val >> valb) & 0xFF)); valb -= 8; }
@@ -1099,26 +1106,21 @@ Gdiplus::Bitmap *imm2d_LoadBase64Image(const char *base64)
 Image LoadImage(const char *name)
 {
     if (!name) return InvalidImage;
-    const size_t nameLength = strnlen_s(name, MAX_PATH + 5);
 
     std::lock_guard<std::mutex> lock(imm2d_bitmapLock);
     if (!imm2d_graphics) return InvalidImage;
 
-    Gdiplus::Bitmap *result{};
-
-    // Assume a very long "file name" is actually a Base64-encoded image
-    if (nameLength > MAX_PATH) result = imm2d_LoadBase64Image(name);
-
-    if (!result) result = imm2d_LoadResourceImage(name);
+    // Try the Base64 case from the outset (which fails almost immediately
+    // if the string being passed in isn't actually Base64 data)
+    Gdiplus::Bitmap *result = imm2d_LoadBase64Image(name);
 
     // TODO: After 50 images, start storing a path-->Image map and checking it before re-loading.
     //       (This gets trickier with huge Base64-encoded inputs.  Maybe hash-->Image, instead?)
 
+    if (!result) result = imm2d_LoadResourceImage(name);
+
     // TODO: Work much harder to find the file!
     if (!result) result = Gdiplus::Bitmap::FromFile(imm2d_ToWide(name).c_str());
-
-    // Try the Base64 case again, just in case it is a very small Base64-encoded image
-    if (!result) result = imm2d_LoadBase64Image(name);
 
     if (!result) return InvalidImage;
     const UINT frameCount = result->GetFrameCount(&Gdiplus::FrameDimensionTime);
@@ -1176,7 +1178,7 @@ void DrawImage(int x, int y, Image i)
     if (count > 0)
     {
         const uint64_t now = imm2d_runDuration;
-        const auto wrapped = now % imm2d_imageFrameSumMs[i];
+        const auto wrapped = now % std::max(1U, imm2d_imageFrameSumMs[i]);
 
         const auto begin = imm2d_imageFrameCumulativeCentiSeconds.cbegin() + imm2d_imageFrameStart[i];
         auto found = std::lower_bound(begin, begin + imm2d_imageFrameCount[i], wrapped / 10);
