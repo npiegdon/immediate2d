@@ -31,7 +31,7 @@ using namespace std;
 // we can pass the string directly to Immediate2D's image loading function and
 // it will figure things out on its own, automatically.
 //
-// These PNGs were only a couple hundred bytes, so it makes sense and isn't
+// These images were only a couple hundred bytes, so it makes sense and isn't
 // too messy here.  You can shrink PNGs substantially without any loss by using
 // tools like pngout, which you can find here: http://advsys.net/ken/utils.htm
 
@@ -41,10 +41,9 @@ static constexpr const char HousePng[] = "iVBORw0KGgoAAAANSUhEUgAAACEAAAAeCAMAAA
     "ZBNbMiKgJydqJeCFBzRq3nHkeAPhcXR/xLX7RXuLiieAN7SELAHhahxuEW2bZ7C7KkJC8ReUgKsrQmT5HP04J0wRzCmF/"
     "CTFXNdrGP/R4jyWzV1SwN8R3nO5zgoUNw/O8ee4Zw/4MBJl8LDAKcBNAFwRuJgw4oY9H/hQAAAABJRU5ErkJggg==";
 
-static constexpr const char TreePng[] = "iVBORw0KGgoAAAANSUhEUgAAAA4AAAAcBAMAAACjeJNyAAAAElBMVEX//"
-    "/8AjQChxaGgPAANfw3///8mLBhYAAAAAXRSTlMAQObYZgAAAGRJREFUeF6NzLENwzAMBVGyUJ8T5AEYZINMoEADSIX3Xy"
-    "X2F6tUIUC85uPsumL7PF0pvz7SQxRCOj1F8mTKIb31LSiwCAXgE+ddoQ0kMM2pcQ9XffUah9G6Bg4ZsPf1f1jOafYF+LM"
-    "K5nbjm7QAAAAASUVORK5CYII=";
+static constexpr const char TreeGif[] = "R0lGODlhDgAcAKIAAACNAP///6HFoaA8AA1/Df///wAAAAAAACH5BAUAA"
+    "AUALAAAAAAOABwAAANVWLoV/AxAGOSM9iqQNe/T51wVIIAYQKDLx12ccALjwxErDd25brufR8nkqhVcBBmtNuTlFk2gz6"
+    "UENmICHJYz1H5wT6l0MhhoFuWzIq1mn92kgPyRAAA7";
 
 struct Flake
 {
@@ -66,7 +65,7 @@ void run()
 {
     UseDoubleBuffering(true);
     const Image house = LoadImage(HousePng);
-    const Image tree = LoadImage(TreePng);
+    const Image tree = LoadImage(TreeGif);
 
     constexpr int MaxFlakes = 300;
 
