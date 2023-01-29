@@ -113,7 +113,7 @@ void run()
         Wait(1);
 
         // Only proceed if the user pressed a key
-        char key = LastKey();
+        char key = LastBufferedKey();
         if (key == 0) continue;
 
         // Erase the old cursor
