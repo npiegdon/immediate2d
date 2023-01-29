@@ -527,6 +527,7 @@ const int PixelScale = IMM2D_SCALE;
 
 // This is all we need that is removed by WIN32_LEAN_AND_MEAN
 #include <mmeapi.h>
+#include <timeapi.h>
 
 // GDI+ uses the min/max macros, so we have to work around disabling them.
 namespace Gdiplus { using std::min; using std::max; }
@@ -1372,6 +1373,9 @@ int WINAPI WinMain(_In_ HINSTANCE instance, _In_opt_ HINSTANCE, _In_ LPSTR, _In_
     HWND wnd = CreateWindow(TEXT("Immediate2D"), TEXT("Immediate2D"), style, CW_USEDEFAULT, CW_USEDEFAULT, r.right - r.left, r.bottom - r.top, nullptr, nullptr, instance, nullptr);
     if (wnd == nullptr) return 1;
 
+    // We want the best possible timer resolution for Sleep calls
+    ::timeBeginPeriod(1);
+
     ULONG_PTR gdiPlusToken;
     Gdiplus::GdiplusStartupInput gdiplusStartupInput;
     Gdiplus::Status startupResult = GdiplusStartup(&gdiPlusToken, &gdiplusStartupInput, NULL);
@@ -1433,6 +1437,8 @@ int WINAPI WinMain(_In_ HINSTANCE instance, _In_opt_ HINSTANCE, _In_ LPSTR, _In_
         std::lock_guard<std::mutex> lock3(imm2d_musicLock);
         imm2d_musicRunning = false;
         if (imm2d_musicThread) WaitForSingleObject(imm2d_musicThread, INFINITE);
+
+        ::timeEndPeriod(1);
 
         // Without this, the main thread doesn't get killed fast enough to avoid
         // touching objects that have already been cleaned up after WinMain returns.
