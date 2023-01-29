@@ -1341,7 +1341,7 @@ static LRESULT CALLBACK imm2d_WndProc(HWND wnd, UINT msg, WPARAM w, LPARAM l)
 
     case WM_KEYDOWN:
     {
-        char thisKey = MapVirtualKey((UINT)w, MAPVK_VK_TO_CHAR);
+        auto thisKey = (char)MapVirtualKey((UINT)w, MAPVK_VK_TO_CHAR);
         if (w == VK_LEFT || w == VK_UP || w == VK_RIGHT || w == VK_DOWN) thisKey = char(w) - 0x14;
         if (thisKey < 32) imm2d_AddBufferedKey(imm2d_key = thisKey);
         return 0;
@@ -1352,13 +1352,13 @@ static LRESULT CALLBACK imm2d_WndProc(HWND wnd, UINT msg, WPARAM w, LPARAM l)
     return DefWindowProc(wnd, msg, w, l);
 }
 
-static DWORD WINAPI imm2d_threadProc(LPVOID lpParam) { run(); return 0; }
+static DWORD WINAPI imm2d_threadProc(LPVOID) { run(); return 0; }
 
 int WINAPI WinMain(_In_ HINSTANCE instance, _In_opt_ HINSTANCE, _In_ LPSTR, _In_ int cmdShow)
 {
-    if (Width <= 0) { MessageBox(0, TEXT("IMM2D_WIDTH must be greater than 0."), TEXT("Bad Width"), MB_ICONERROR); return 1; }
-    if (Height <= 0) { MessageBox(0, TEXT("IMM2D_HEIGHT must be greater than 0."), TEXT("Bad Height"), MB_ICONERROR); return 1; }
-    if (PixelScale <= 0) { MessageBox(0, TEXT("IMM2D_SCALE must be greater than 0."), TEXT("Bad PixelScale"), MB_ICONERROR); return 1; }
+    if constexpr (Width <= 0) { MessageBox(0, TEXT("IMM2D_WIDTH must be greater than 0."), TEXT("Bad Width"), MB_ICONERROR); return 1; }
+    if constexpr (Height <= 0) { MessageBox(0, TEXT("IMM2D_HEIGHT must be greater than 0."), TEXT("Bad Height"), MB_ICONERROR); return 1; }
+    if constexpr (PixelScale <= 0) { MessageBox(0, TEXT("IMM2D_SCALE must be greater than 0."), TEXT("Bad PixelScale"), MB_ICONERROR); return 1; }
 
     WNDCLASS wc{ CS_OWNDC, imm2d_WndProc, 0, 0, instance, LoadIcon(nullptr, IDI_APPLICATION), LoadCursor(nullptr, IDC_ARROW), (HBRUSH)(COLOR_WINDOW + 1), nullptr, TEXT("Immediate2D") };
     if (!RegisterClass(&wc)) return 1;
@@ -1376,7 +1376,7 @@ int WINAPI WinMain(_In_ HINSTANCE instance, _In_opt_ HINSTANCE, _In_ LPSTR, _In_
 
     ULONG_PTR gdiPlusToken;
     Gdiplus::GdiplusStartupInput gdiplusStartupInput;
-    Gdiplus::Status startupResult = GdiplusStartup(&gdiPlusToken, &gdiplusStartupInput, NULL);
+    GdiplusStartup(&gdiPlusToken, &gdiplusStartupInput, NULL);
 
     imm2d_bitmap = std::make_unique<Gdiplus::Bitmap>(Width, Height);
     imm2d_bitmapOther = std::make_unique<Gdiplus::Bitmap>(Width, Height);
