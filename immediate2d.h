@@ -91,7 +91,7 @@
 ///////////////////////////////////////////////////////////////////////////////
 
 
-// This makes "Color" a synonym for "unsigned int" (a positive number).
+// This line makes "Color" a synonym for "unsigned int", a positive number.
 using Color = unsigned int;
 
 // MakeColor returns a Color that can be used with the other drawing functions.
@@ -205,7 +205,7 @@ void Clear(Color c = Black);
 Color ReadPixel(int x, int y);
 
 
-// This makes "Image" a synonym for "int" (a positive or negative number).
+// This makes "Image" a synonym for "int", a positive or negative number.
 using Image = int;
 
 const static Image InvalidImage = -1;
@@ -352,7 +352,7 @@ char LastKey();
 
 // Used to check the results of LastKey() against non-printable keys:
 //
-//     // Save the value in a variable before checking it
+//     // Save the value in a variable before testing it.
 //     const char key = LastKey();
 //     if (key == Enter) ...
 //     if (key == Left) ...
@@ -377,7 +377,7 @@ enum Keys
 
 // Sometimes immediate input (where only the most-recent keypress is available) isn't
 // the best fit.  If you don't want to miss any input, use this instead of LastKey.
-// This is useful for reading typing input or fast arrow keys.
+// This is useful when you want to get typing input or fast arrow keys.
 //
 // Each call will return the next keypress in the stored list and then remove that
 // entry from the list.  Calling this when no more input is available will return 0.
