@@ -210,22 +210,18 @@ using Image = int;
 
 const static Image InvalidImage = -1;
 
-// Attempts to load an image and returns an "Image" handle that can be used
+// Attempts to load and return an Image handle that can be used
 // with DrawImage.  Many image file extensions are supported.
 //
-// To find the image you requested, the following locations are searched,
-// in this order:
+// To find the image you requested, the following locations are
+// searched, in this order:
+//   - Base64-encoded image data (any file format) passed in directly.
 //   - Resources embedded inside the app's .exe file.
 //   - Files in the current working directory.
-//   - Files in the .exe's directory.
-//   - In a /media or /images sub-folder under the .exe's directory.
 // 
 // If the image wasn't found or there was some other problem loading it,
 // this function will return InvalidImage.
 //
-// This can be called with Base64-encoded image data directly (passing the data
-// instead of a file name) to avoid files or embedded resources entirely.
-// 
 // Try to call this only once per file you want to load.  Keep the returned Image
 // value around instead of calling this again and again.  Images remain loaded in
 // memory until your program ends, so calling this repeatedly for the same image
@@ -1034,6 +1030,19 @@ void Clear(Color c)
     imm2d_SetDirty();
 }
 
+Gdiplus::Bitmap *imm2d_CheckedLoad(Gdiplus::Bitmap *b)
+{
+    // It's not enough to try and load a GDI+ bitmap.  It can return
+    // a valid pointer even when it wasn't able to load anything. You
+    // have to check the image status, too.  So we pass all of our
+    // load calls through this double-checker.
+
+    if (!b || b->GetLastStatus() == Gdiplus::Ok) return b;
+
+    delete b;
+    return nullptr;
+}
+
 Gdiplus::Bitmap *imm2d_LoadResourceImage(const char *resourceName)
 {
     const HRSRC id = FindResourceA(nullptr, resourceName, "IMAGES");
@@ -1051,10 +1060,11 @@ Gdiplus::Bitmap *imm2d_LoadResourceImage(const char *resourceName)
     IStream *stream = SHCreateMemStream(static_cast<BYTE*>(bytes), size);
     if (!stream) { FreeResource(resource); return nullptr; }
 
-    auto *result = Gdiplus::Bitmap::FromStream(stream);
+    auto *result = imm2d_CheckedLoad(Gdiplus::Bitmap::FromStream(stream));
     stream->Release();
     FreeResource(resource);
 
+    if (result->GetLastStatus() != Gdiplus::Ok) result = nullptr;
     return result;
 }
 
@@ -1091,7 +1101,7 @@ Gdiplus::Bitmap *imm2d_LoadBase64Image(const char *base64)
     IStream *stream = SHCreateMemStream((const BYTE*)decoded.data(), (UINT)decoded.size());
     if (!stream) return nullptr;
 
-    auto *result = Gdiplus::Bitmap::FromStream(stream);
+    auto *result = imm2d_CheckedLoad(Gdiplus::Bitmap::FromStream(stream));
     stream->Release();
 
     return result;
@@ -1120,7 +1130,7 @@ Image LoadImage(const char *name)
     if (!result) result = imm2d_LoadResourceImage(name);
 
     // TODO: Work much harder to find the file!
-    if (!result) result = Gdiplus::Bitmap::FromFile(imm2d_ToWide(name).c_str());
+    if (!result) result = imm2d_CheckedLoad(Gdiplus::Bitmap::FromFile(imm2d_ToWide(name).c_str()));
 
     if (!result) return InvalidImage;
     const UINT frameCount = result->GetFrameCount(&Gdiplus::FrameDimensionTime);
