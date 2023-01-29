@@ -575,7 +575,6 @@ static std::vector<uint32_t> imm2d_imageFrameCumulativeCentiSeconds;
 static std::vector<uint32_t> imm2d_imageFrameSumMs;
 
 static std::mutex imm2d_musicLock;
-static HANDLE imm2d_musicThread{};
 
 struct Imm2dMusicNote { uint8_t noteId; uint32_t duration; };
 static std::deque<Imm2dMusicNote> imm2d_musicQueue;
@@ -1266,7 +1265,6 @@ void PlayMusic(int noteId, int ms)
     if (!imm2d_musicRunning) return;
 
     imm2d_musicQueue.push_back(Imm2dMusicNote{ uint8_t(uint8_t(noteId) & 0x7F), static_cast<uint32_t>(ms) });
-    if (!imm2d_musicThread) imm2d_musicThread = CreateThread(nullptr, 0, imm2d_musicThreadProc, nullptr, 0, nullptr);
 }
 
 void ResetMusic()
@@ -1390,6 +1388,7 @@ int WINAPI WinMain(_In_ HINSTANCE instance, _In_opt_ HINSTANCE, _In_ LPSTR, _In_
     ShowWindow(wnd, cmdShow);
     UpdateWindow(wnd);
 
+    HANDLE musicThread = CreateThread(nullptr, 0, imm2d_musicThreadProc, nullptr, 0, nullptr);
     CreateThread(nullptr, 0, imm2d_threadProc, nullptr, 0, nullptr);
 
     const auto firstDraw = GetTickCount64();
@@ -1436,7 +1435,7 @@ int WINAPI WinMain(_In_ HINSTANCE instance, _In_opt_ HINSTANCE, _In_ LPSTR, _In_
 
         std::lock_guard<std::mutex> lock3(imm2d_musicLock);
         imm2d_musicRunning = false;
-        if (imm2d_musicThread) WaitForSingleObject(imm2d_musicThread, INFINITE);
+        if (musicThread) WaitForSingleObject(musicThread, INFINITE);
 
         ::timeEndPeriod(1);
 
