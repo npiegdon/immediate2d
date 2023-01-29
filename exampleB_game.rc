@@ -1,0 +1,28 @@
+
+//
+// The format here is: resourceName IMAGES "filePath"
+//
+// - resourceName: the name you'll pass to LoadImage to retrieve the image.
+// - IMAGES: the resource "category", which Immediate2D expects to be IMAGES.
+// - filePath: a relative path (from this .rc file) to the file you're embedding.
+//
+// Once you've added all the entries to this list that you'd like to make
+// available from your code, you can simply drag this .rc file to your project
+// in Visual Studio and it'll handle the rest.  Or, if you're building from a
+// VS command prompt, call rc.exe with your resource file as the only argument:
+//
+// > rc.exe myResources.rc
+//
+// That will make a .res file that can be included in the list of files you
+// pass to cl.exe, like this:
+//
+// > cl.exe /EHsc myCode.cpp myResources.res
+//
+
+bugH    IMAGES "exampleData\\littleGame\\bugH.gif"
+bugV    IMAGES "exampleData\\littleGame\\bugV.gif"
+coin    IMAGES "exampleData\\littleGame\\coin.gif"
+door    IMAGES "exampleData\\littleGame\\door.gif"
+smile   IMAGES "exampleData\\littleGame\\smile.gif"
+trigger IMAGES "exampleData\\littleGame\\trigger.gif"
+wall    IMAGES "exampleData\\littleGame\\wall.gif"

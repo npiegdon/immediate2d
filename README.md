@@ -88,3 +88,10 @@ An adaptation of Kevin Beason's [smallpt](http://www.kevinbeason.com/smallpt/) r
 Demonstrates image loading while recreating [an effect](https://youtu.be/aQGgKvJPuZA) from the 1993 PC/DOS game "Jetpack Christmas Special!"
 
 <img alt="Example A" src="images/exampleA.png" height="240">
+
+---
+
+### Example B - A Little Game
+A remake of an old high school project of mine, demonstrating how to load images from resources embedded right in the application.  A basic level editor is included, which is also fun to tinker with.
+
+<img alt="Example B" src="images/exampleB.png" height="240">

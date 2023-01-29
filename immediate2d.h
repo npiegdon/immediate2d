@@ -12,7 +12,7 @@
 // See the full notice at the end of this file.
 // 
 // CHANGELOG (see CHANGES.md for more detail)
-// 2022-12, v2: API cleanup, single file, image loading/drawing
+// 2023-01, v2: API cleanup, single file, image loading/drawing, new examples
 // 2017-11, v1: Initial release
 //
 ///////////////////////////////////////////////////////////////////////////////
