@@ -510,6 +510,10 @@ extern const int PixelScale;
 #define IMM2D_SCALE 5
 #endif
 
+#ifndef IMM2D_WINDOW_TITLE
+#define IMM2D_WINDOW_TITLE "Immediate2D"
+#endif
+
 const int Width = IMM2D_WIDTH;
 const int Height = IMM2D_HEIGHT;
 const int PixelScale = IMM2D_SCALE;
@@ -1368,7 +1372,7 @@ int WINAPI WinMain(_In_ HINSTANCE instance, _In_opt_ HINSTANCE, _In_ LPSTR, _In_
     RECT r{ 0, 0, Width * PixelScale, Height * PixelScale };
     AdjustWindowRect(&r, style, FALSE);
 
-    HWND wnd = CreateWindow(TEXT("Immediate2D"), TEXT("Immediate2D"), style, CW_USEDEFAULT, CW_USEDEFAULT, r.right - r.left, r.bottom - r.top, nullptr, nullptr, instance, nullptr);
+    HWND wnd = CreateWindow(TEXT("Immediate2D"), TEXT(IMM2D_WINDOW_TITLE), style, CW_USEDEFAULT, CW_USEDEFAULT, r.right - r.left, r.bottom - r.top, nullptr, nullptr, instance, nullptr);
     if (wnd == nullptr) return 1;
 
     // We want the best possible timer resolution for Sleep calls
